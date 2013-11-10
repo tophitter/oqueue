@@ -332,10 +332,10 @@ oq.old_bncustommsg        = nil ;
 oq.old_bn_msg             = nil ;
 oq.WhoPoppedList_Ids = 
 {
-  [ 2825] = "Bloodlust",
-  [32182] = "Heroism",
-  [80353] = "Time Warp",
-  [90355] = "Ancient Hysteria",
+  [ 2825] = GetSpellInfo(2825),
+  [32182] = GetSpellInfo(32182),
+  [80353] = GetSpellInfo(80353),
+  [90355] = GetSpellInfo(90355),
 } ;
 
 
@@ -4349,7 +4349,7 @@ function oq.get_ab_text( txt )
     return "" ;
   end
   -- Resources: 400/1600
-  local points = txt:match( "Resources: (%d+)" ) ;
+  local bases, points = txt:match( OQ.BG_AB_POINTS_REGEX ) ;
   return points ;
 end
 
@@ -4358,7 +4358,7 @@ function oq.get_av_text( txt )
     return "" ;
   end
   -- Reinforcements: 400
-  local points = txt:match( "Reinforcements: (%d+)" ) ;
+  local points = txt:match( OQ.BG_AV_POINTS_REGEX ) ;
   return points ;
 end
 
@@ -4367,7 +4367,7 @@ function oq.get_bfg_text( txt )
     return "" ;
   end
   -- Resources: 400/2000
-  local points = txt:match( "Resources: (%d+)" ) ;
+  local bases, points = txt:match( OQ.BG_BFG_POINTS_REGEX ) ;
   return points ;
 end
 
@@ -4376,7 +4376,7 @@ function oq.get_eots_text( txt )
     return "" ;
   end
   -- Bases: 3  Victory Points:  1600/2000
-  local bases, points  = txt:match( "Bases: (%d+)  Victory Points: (%d+)" ) ;
+  local bases, points  = txt:match( OQ.BG_EOTS_POINTS_REGEX ) ;
   return points ;
 end
 
@@ -4385,7 +4385,7 @@ function oq.get_ioc_text( txt )
     return "" ;
   end
   -- Reinforcements: 400
-  local points = txt:match( "Reinforcements: (%d+)" ) ;
+  local points = txt:match( OQ.BG_IOC_POINTS_REGEX ) ;
   return points or "" ;
 end
 
@@ -4395,7 +4395,7 @@ function oq.get_sota_text( txt )
   end
   -- time
   -- End of Round: 02:01
-  local tm = txt:match( "End of Round: (%d+:%d+)" ) ;  
+  local tm = txt:match( OQ.BG_SOTA_ROUND_TIME_REGEX ) ;  
   if (tm == nil) or (tm == "") then
     return "" ;
   else
@@ -4408,7 +4408,7 @@ function oq.get_ssm_text( txt )
     return "" ;
   end
   -- Resources: 400/1600
-  local points = txt:match( "Resources: (%d+)" ) ;
+  local points = txt:match( OQ.BG_SSM_POINTS_REGEX ) ;
   return points ;
 end
 
@@ -4417,7 +4417,7 @@ function oq.get_tok_text( txt )
     return "" ;
   end
   -- Victory Points: 400/1600
-  local points = txt:match( "Victory Points: (%d+)" ) ;
+  local points = txt:match( OQ.BG_TOK_POINTS_REGEX ) ;
   return points ;
 end
 
@@ -4425,7 +4425,7 @@ function oq.get_tp_text( txt )
   if (txt == nil) then
     return "" ;
   end
-  -- Bases: 3  Victory Points:  1600/1600
+  -- 0/3
   local points = txt:match( "%d+" ) ;
   return points or "" ;
 end
@@ -4444,7 +4444,7 @@ function oq.get_dwg_text( txt )
     return "" ;
   end
   -- Bases: 3  Gold:  200/1600
-  local bases, points  = txt:match( "Bases: (%d+)  Gold: (%d+)" ) ;
+  local bases, points  = txt:match( OQ.BG_DWG_POINTS_REGEX ) ;
   return points or "" ;
 end
 
@@ -4494,12 +4494,12 @@ function oq.get_ad_text()
     aText = oq.get_tok_text( line1 ) ;
     hText = oq.get_tok_text( line2 ) ;
   elseif (zone == "TP") then
-    tm    = line1:match( "Remaining: (%d+)" ) ;  
+    tm    = line1:match( OQ.BG_TIME_REMAINING_REGEX ) ;  
     local line3 = AlwaysUpFrame3Text:GetText() ;
     aText = oq.get_tp_text( line2 ) ;
     hText = oq.get_tp_text( line3 ) ;
   elseif (zone == "WSG") then
-    tm    = line1:match( "Remaining: (%d+)" ) ;  
+    tm    = line1:match( OQ.BG_TIME_REMAINING_REGEX ) ;  
     local line3 = AlwaysUpFrame3Text:GetText() ;
     aText = oq.get_wsg_text( line2 ) ;
     hText = oq.get_wsg_text( line3 ) ;
@@ -9851,7 +9851,7 @@ function oq.create_karma_shield( parent )
   d.label:SetPoint("TOPLEFT", d, "TOPLEFT", 0, -2 ) ;
   d.label:SetJustifyV( "CENTER" ) ;
   d.label:SetJustifyH( "CENTER" ) ;
-  d.label:SetFont( "Fonts\\FRIZQT__.TTF", 14 ) ;
+  d.label:SetFont( OQ.FONT, 14 ) ;
   d.label:SetText( "--" ) ;
   d.label:Show() ;
 
@@ -10047,18 +10047,18 @@ function oq.create_bounty_board( parent )
   y = -165 ;
   d._poster = oq.CreateFrame( "SimpleHTML", "OQBountyPoster", d ) ;
   d._poster:SetPoint( "TOPLEFT"    , x, y ) ;
-  d._poster:SetFont( "Fonts\\FRIZQT__.TTF", 12 ) ;
+  d._poster:SetFont( OQ.FONT, 12 ) ;
   d._poster:SetWidth ( d:GetWidth() - 2*x ) ;
   d._poster:SetHeight( 100 ) ;
-  d._poster:SetFont        ( 'h1', "Fonts\\FRIZQT__.TTF", 16 ) ;
+  d._poster:SetFont        ( 'h1', OQ.FONT, 16 ) ;
   d._poster:SetTextColor   ( 'h1', 0.2, 0.2, 0.2, 0.8 ) ;
   
-  d._poster:SetFont        ( 'h2', "Fonts\\MORPHEUS.ttf", 40 ) ;
+  d._poster:SetFont        ( 'h2', OQ.FONT2, 40 ) ;
   d._poster:SetShadowColor ( 'h2', 0, 0, 0, 1 ) ;
   d._poster:SetShadowOffset( 'h2', 1, -1 ) ;
   d._poster:SetTextColor   ( 'h2', 128/255, 0/255, 0/255, 1.0 ) ;
   
-  d._poster:SetFont        ( 'h3', "Fonts\\FRIZQT__.ttf", 10 ) ;
+  d._poster:SetFont        ( 'h3', OQ.FONT, 10 ) ;
   d._poster:SetShadowColor ( 'h3', 0, 0, 0, 1 ) ;
   d._poster:SetShadowOffset( 'h3', 0, 0 ) ;
   d._poster:SetTextColor   ( 'h3', 0.2, 0.2, 0.2, 0.8 ) ;
@@ -10071,7 +10071,7 @@ function oq.create_bounty_board( parent )
   d._horde_score_l = oq.label( d, x1, y, 90, OQ.BUTTON_SZ, OQ.FACTION_ICON["H"] .." Horde" ) ;
   d._horde_score_l:SetJustifyV( "MIDDLE" ) ;
   d._horde_score_l:SetJustifyH( "LEFT" ) ;
-  d._horde_score_l:SetFont( "Fonts\\FRIZQT__.TTF", 12 ) ;
+  d._horde_score_l:SetFont( OQ.FONT, 12 ) ;
   d._horde_score_l:SetTextColor( 0.1, 0.1, 0.1, 1.0 ) ;
   d._horde_score_l:SetShadowOffset( 0, 0 ) ;
 
@@ -10090,7 +10090,7 @@ function oq.create_bounty_board( parent )
   d._alliance_score_l = oq.label( d, x1, y, 90, OQ.BUTTON_SZ, OQ.FACTION_ICON["A"] .." Alliance" ) ;
   d._alliance_score_l:SetJustifyV( "MIDDLE" ) ;
   d._alliance_score_l:SetJustifyH( "LEFT" ) ;
-  d._alliance_score_l:SetFont( "Fonts\\FRIZQT__.TTF", 12 ) ;
+  d._alliance_score_l:SetFont( OQ.FONT, 12 ) ;
   d._alliance_score_l:SetTextColor( 0.1, 0.1, 0.1, 1.0 ) ;
   d._alliance_score_l:SetShadowOffset( 0, 0 ) ;
 
@@ -10109,7 +10109,7 @@ function oq.create_bounty_board( parent )
   d._reward_l = oq.label( d, x, y, 100, OQ.BUTTON_SZ, "Rewards" ) ;
   d._reward_l:SetJustifyV( "BOTTOM" ) ;
   d._reward_l:SetJustifyH( "LEFT" ) ;
-  d._reward_l:SetFont( "Fonts\\FRIZQT__.TTF", 16 ) ;
+  d._reward_l:SetFont( OQ.FONT, 16 ) ;
   d._reward_l:SetTextColor( 0.2, 0.2, 0.2, 0.9 ) ;
   d._reward_l:SetShadowOffset( 0, 0 ) ;
 
@@ -10126,7 +10126,7 @@ function oq.create_bounty_board( parent )
   d._remaining_l = oq.label( d, x, y, 100, OQ.BUTTON_SZ, "Time left" ) ;
   d._remaining_l:SetJustifyV( "CENTER" ) ;
   d._remaining_l:SetJustifyH( "LEFT" ) ;
-  d._remaining_l:SetFont( "Fonts\\FRIZQT__.TTF", 16 ) ;
+  d._remaining_l:SetFont( OQ.FONT, 16 ) ;
   d._remaining_l:SetTextColor( 0.2, 0.2, 0.2, 0.9 ) ;
   d._remaining_l:SetShadowOffset( 0, 0 ) ;
 
@@ -10148,7 +10148,7 @@ function oq.create_bounty_board( parent )
   d._page = oq.label( d, x, y, 75, OQ.BUTTON_SZ, "Page 1" ) ;
   d._page:SetJustifyV( "CENTER" ) ;
   d._page:SetJustifyH( "LEFT" ) ;
-  d._page:SetFont( "Fonts\\FRIZQT__.TTF", 12 ) ;
+  d._page:SetFont( OQ.FONT, 12 ) ;
   d._page:SetTextColor( 0.4, 0.4, 0.4, 0.5 ) ;
   
   d.top  = function(self, dontrefresh) self:goto(1, dontrefresh) ; end 
@@ -11262,13 +11262,13 @@ function oq.create_log_button( parent )
   d._text = oq.CreateFrame( "SimpleHTML", "OQLogPoster", d ) ;
   d._text:SetScript("OnHyperLinkClick", oq.onHyperlinkClick ) ;
   d._text:SetPoint( "TOPLEFT"    , x, y ) ;
-  d._text:SetFont( "Fonts\\FRIZQT__.TTF", 12 ) ;
+  d._text:SetFont( OQ.FONT, 12 ) ;
   d._text:SetWidth ( d:GetWidth() - 2*x ) ;
   d._text:SetHeight( d:GetHeight() - 2*abs(y) ) ;
-  d._text:SetFont        ( 'h1', "Fonts\\FRIZQT__.TTF", 16 ) ;
+  d._text:SetFont        ( 'h1', OQ.FONT, 16 ) ;
   d._text:SetTextColor   ( 'h1', 0.9, 0.9, 0.9, 0.8 ) ;
   
-  d._text:SetFont        ( 'h2', "Fonts\\MORPHEUS.ttf", 40 ) ;
+  d._text:SetFont        ( 'h2', OQ.FONT2, 40 ) ;
   d._text:SetShadowColor ( 'h2', 0, 0, 0, 1 ) ;
   d._text:SetShadowOffset( 'h2', 1, -1 ) ;
   d._text:SetTextColor   ( 'h2', 128/255, 0/255, 0/255, 1.0 ) ;
@@ -12383,7 +12383,7 @@ function oq.create_tab3()
   y  = 140 ;
   x  = OQTabPage3:GetWidth() - 250 ;
   cy = 20 ;
-  oq.label( OQTabPage3, x, y, 100, cy, "Premade type:" ) ;   y = y + cy + 3 ;
+  oq.label( OQTabPage3, x, y, 100, cy, OQ.PREMADE_TYPE ) ;   y = y + cy + 3 ;
   x = x + 25 ;
   oq.tab3_radio_bgs       = oq.radiobutton( OQTabPage3, x, y, 24, 22, 100, OQ.LABEL_BG       , OQ.TYPE_BG       , oq.tab3_radio_buttons ) ;   y = y + cy ;
   oq.tab3_radio_arena     = oq.radiobutton( OQTabPage3, x, y, 24, 22, 100, OQ.LABEL_ARENA    , OQ.TYPE_ARENA    , oq.tab3_radio_buttons ) ;   y = y + cy ;
@@ -12553,26 +12553,26 @@ function oq.create_badtagbox( parent )
   y = -40 ;
   local msg = oq.CreateFrame( "SimpleHTML", "OQBadtagPoster", f ) ;
   msg:SetPoint( "TOPLEFT"    , x, y ) ;
-  msg:SetFont( "Fonts\\FRIZQT__.TTF", 12 ) ;
+  msg:SetFont( OQ.FONT, 12 ) ;
   msg:SetWidth ( cx - 2*x ) ;
   msg:SetHeight( cy - 2*y ) ;
-  msg:SetFont        ( "Fonts\\FRIZQT__.TTF", 14 ) ;
+  msg:SetFont        ( OQ.FONT, 14 ) ;
   msg:SetTextColor   ( 136/256, 221/256, 221/256, 0.8 ) ;
   
-  msg:SetFont        ( 'p', "Fonts\\FRIZQT__.TTF", 14 ) ;
+  msg:SetFont        ( 'p', OQ.FONT, 14 ) ;
   msg:SetTextColor   ( 'p', 225/256, 225/256, 225/256, 0.8 ) ;
   
-  msg:SetFont        ( 'h1', "Fonts\\FRIZQT__.TTF", 16 ) ;
+  msg:SetFont        ( 'h1', OQ.FONT, 16 ) ;
 --  msg:SetTextColor   ( 'h1', 221/256, 36/256, 36/256, 0.8 ) ;
 --  msg:SetTextColor   ( 'h1', 179/256, 225/256, 225/256, 0.8 ) ;
   msg:SetTextColor   ( 'h1', 166/256, 166/256, 26/256, 0.8 ) ;
   
-  msg:SetFont        ( 'h2', "Fonts\\MORPHEUS.ttf", 36 ) ;
+  msg:SetFont        ( 'h2', OQ.FONT2, 36 ) ;
   msg:SetShadowColor ( 'h2', 0, 0, 0, 1 ) ;
   msg:SetShadowOffset( 'h2', 1, -1 ) ;
   msg:SetTextColor   ( 'h2', 221/256, 36/256, 36/256, 0.8 ) ;
   
-  msg:SetFont        ( 'h3', "Fonts\\FRIZQT__.ttf", 22 ) ;
+  msg:SetFont        ( 'h3', OQ.FONT, 22 ) ;
   msg:SetShadowColor ( 'h3', 0, 0, 0, 1 ) ;
   msg:SetShadowOffset( 'h3', 0, 0 ) ;
   msg:SetTextColor   ( 'h3', 221/256, 221/256, 36/256, 0.8 ) ;
@@ -12632,24 +12632,24 @@ function oq.create_banbox( parent )
   y = -50 ;
   local msg = oq.CreateFrame( "SimpleHTML", "OQBannedPoster", f ) ;
   msg:SetPoint( "TOPLEFT"    , x, y ) ;
-  msg:SetFont( "Fonts\\FRIZQT__.TTF", 12 ) ;
+  msg:SetFont( OQ.FONT, 12 ) ;
   msg:SetWidth ( cx - 2*x ) ;
   msg:SetHeight( cy - 2*y ) ;
-  msg:SetFont        ( "Fonts\\FRIZQT__.TTF", 14 ) ;
+  msg:SetFont        ( OQ.FONT, 14 ) ;
   msg:SetTextColor   ( 136/256, 221/256, 221/256, 0.8 ) ;
   
-  msg:SetFont        ( 'p', "Fonts\\FRIZQT__.TTF", 14 ) ;
+  msg:SetFont        ( 'p', OQ.FONT, 14 ) ;
   msg:SetTextColor   ( 'p', 225/256, 225/256, 225/256, 0.8 ) ;
   
-  msg:SetFont        ( 'h1', "Fonts\\FRIZQT__.TTF", 16 ) ;
+  msg:SetFont        ( 'h1', OQ.FONT, 16 ) ;
   msg:SetTextColor   ( 'h1', 221/256, 36/256, 36/256, 0.8 ) ;
   
-  msg:SetFont        ( 'h2', "Fonts\\MORPHEUS.ttf", 36 ) ;
+  msg:SetFont        ( 'h2', OQ.FONT2, 36 ) ;
   msg:SetShadowColor ( 'h2', 0, 0, 0, 1 ) ;
   msg:SetShadowOffset( 'h2', 1, -1 ) ;
   msg:SetTextColor   ( 'h2', 221/256, 36/256, 36/256, 0.8 ) ;
   
-  msg:SetFont        ( 'h3', "Fonts\\FRIZQT__.ttf", 22 ) ;
+  msg:SetFont        ( 'h3', OQ.FONT, 22 ) ;
   msg:SetShadowColor ( 'h3', 0, 0, 0, 1 ) ;
   msg:SetShadowOffset( 'h3', 0, 0 ) ;
   msg:SetTextColor   ( 'h3', 221/256, 36/256, 36/256, 0.8 ) ;
@@ -12786,24 +12786,24 @@ function oq.create_helpbox( parent )
   y = -20 ;
   local msg = oq.CreateFrame( "SimpleHTML", "OQHelpPoster", f ) ;
   msg:SetPoint( "TOPLEFT"    , x, y ) ;
-  msg:SetFont( "Fonts\\FRIZQT__.TTF", 12 ) ;
+  msg:SetFont( OQ.FONT, 12 ) ;
   msg:SetWidth ( cx - 2*x ) ;
   msg:SetHeight( cy - 2*y ) ;
-  msg:SetFont        ( "Fonts\\FRIZQT__.TTF", 14 ) ;
+  msg:SetFont        ( OQ.FONT, 14 ) ;
   msg:SetTextColor   ( 136/256, 221/256, 221/256, 0.8 ) ;
   
-  msg:SetFont        ( 'p', "Fonts\\FRIZQT__.TTF", 14 ) ;
+  msg:SetFont        ( 'p', OQ.FONT, 14 ) ;
   msg:SetTextColor   ( 'p', 225/256, 225/256, 225/256, 0.8 ) ;
   
-  msg:SetFont        ( 'h1', "Fonts\\FRIZQT__.TTF", 16 ) ;
+  msg:SetFont        ( 'h1', OQ.FONT, 16 ) ;
   msg:SetTextColor   ( 'h1', 136/256, 221/256, 221/256, 0.8 ) ;
   
-  msg:SetFont        ( 'h2', "Fonts\\MORPHEUS.ttf", 36 ) ;
+  msg:SetFont        ( 'h2', OQ.FONT2, 36 ) ;
   msg:SetShadowColor ( 'h2', 0, 0, 0, 1 ) ;
   msg:SetShadowOffset( 'h2', 1, -1 ) ;
   msg:SetTextColor   ( 'h2', 179/256, 225/256, 225/256, 0.8 ) ;
   
-  msg:SetFont        ( 'h3', "Fonts\\FRIZQT__.ttf", 10 ) ;
+  msg:SetFont        ( 'h3', OQ.FONT, 10 ) ;
   msg:SetShadowColor ( 'h3', 0, 0, 0, 1 ) ;
   msg:SetShadowOffset( 'h3', 0, 0 ) ;
   msg:SetTextColor   ( 'h3', 136/256, 221/256, 221/256, 0.8 ) ;

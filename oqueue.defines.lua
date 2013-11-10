@@ -11,11 +11,12 @@
 ]]--
 local addonName, OQ = ... ;
 
-OQ.FONT = "Fonts\\FRIZQT__.TTF" ;
-if (string.sub(GetCVar("realmList"),1,2) == "eu") then
-  -- force to unicode supported font, allowing cyrillic fonts to render properly
-  OQ.FONT = "Interface\\Addons\\oqueue\\fonts\\ARIALB.TTF" ;
-end
+OQ.FONT = "Interface\\Addons\\oqueue\\fonts\\FRIZQT__.TTF" ;
+OQ.FONT2 = "Interface\\Addons\\oqueue\\fonts\\MORPHEUS.TTF" ;
+--if (string.sub(GetCVar("realmList"),1,2) == "eu") then
+--  -- force to unicode supported font, allowing cyrillic fonts to render properly
+--  OQ.FONT = "Interface\\Addons\\oqueue\\fonts\\arialb.ttf"
+--end
 OQ.FONT_FIXED = "Interface\\Addons\\oqueue\\fonts\\lucida_console.ttf" ;
 OQ.BOUNTY_UP  = "INTERFACE/BUTTONS/UI-MICROBUTTON-SOCIALS-UP" ;
 OQ.BOUNTY_DN  = "INTERFACE/BUTTONS/UI-MICROBUTTON-SOCIALS-DOWN" ;

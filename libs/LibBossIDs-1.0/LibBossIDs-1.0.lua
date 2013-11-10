@@ -1,6 +1,6 @@
 --[[
 Name: LibBossIDs-1.0
-Revision: $Revision: 85 $
+Revision: $Revision: 86 $
 Author: Elsia
 Website: http://www.wowace.com/addons/libbossids-1-0/
 Documentation:
@@ -10,7 +10,7 @@ Dependencies: LibStub
 License: Public Domain, Absolutely no Warranty.
 ]]
 
-local MAJOR, MINOR = "LibBossIDs-1.0", "$Revision: 85 $"
+local MAJOR, MINOR = "LibBossIDs-1.0", "$Revision: 86 $"
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if not lib then return end
@@ -37,7 +37,7 @@ local BossIDs = {
    [40825]	= true,	-- Erunak Stonespeaker
    [40788]	= true,	-- Mindbender Ghur'sha
    [42172]	= true,	-- Ozumat? Not in heroic! /Mikk
-   [44566]      = true, -- Ozumat - confirmed in heroic! /Mikk
+   [44566]  = true, -- Ozumat - confirmed in heroic! /Mikk
 
    -------------------------------------------------------------------------------
    -- Ahn'kahet: The Old Kingdom
@@ -132,7 +132,6 @@ local BossIDs = {
    -- Blackrock Depths: Detention Block
    -------------------------------------------------------------------------------
    [9018]	= true,	-- High Interrogator Gerstahn
-   [10096]      = true, -- High Justice Grimstone
 
    -------------------------------------------------------------------------------
    -- Blackrock Depths: Grim Guzzler
@@ -180,12 +179,6 @@ local BossIDs = {
    [9033]	= true,	-- General Angerforge
    [8983]	= true,	-- Golem Lord Argelmach
    -- Dark Keepers, 6 of em: http://www.wowpedia.org/Dark_Keeper
-   [9438]       = true, -- Dark Keeper Bethek
-   [9442]       = true, -- Dark Keeper Ofgut
-   [9443]       = true, -- Dark Keeper Pelver
-   [9439]       = true, -- Dark Keeper Uggel
-   [9437]       = true, -- Dark Keeper Vorfalk
-   [9441]       = true, -- Dark Keeper Zimrel
 
    -------------------------------------------------------------------------------
    -- Blackrock Depths: Ring of Law (Arena)
@@ -357,10 +350,10 @@ local BossIDs = {
    -- End Time 4.3
    -------------------------------------------------------------------------------
    [54431]	= true,	-- Echo of Baine
-   [54445]      = true, -- Echo of Jaina
-   [54123]      = true, -- Echo of Sylvanas
-   [54544]      = true, -- Echo of Tyrande
-   [54432]      = true, -- Murozond
+   [54445] = true, -- Echo of Jaina
+   [54123] = true, -- Echo of Sylvanas
+   [54544] = true, -- Echo of Tyrande
+   [54432] = true, -- Murozond
 
    -------------------------------------------------------------------------------
    -- Firelands 4.2 PTR
@@ -382,10 +375,10 @@ local BossIDs = {
    -------------------------------------------------------------------------------
    -- Gate of the Setting Sun (MoP-Dungeon 5.0.1)
    -------------------------------------------------------------------------------
-   [56589]	= true,	--  Striker Ga'dok
-   [56636]	= true,	--  Commander Ri'mok
+   [54432]	= true,	--  Gadok
+   [56636]	= true,	--  Rimok
    [56877]	= true,	--  Raigon
-   [56906]	= true,	--  Saboteur Kip'tilak
+   [56906]	= true,	--  Kiptilak
 
    -------------------------------------------------------------------------------
    -- Gnomeregan
@@ -426,7 +419,6 @@ local BossIDs = {
    [29307]	= true,	-- Drakkari Colossus
    [29306]	= true,	-- Gal'darah
    [29932]	= true,	-- Eck the Ferocious (Heroic)
-   [29573]      = true, -- Drakkari Elemental
 
    -------------------------------------------------------------------------------
    -- Halls of Lightning
@@ -472,13 +464,6 @@ local BossIDs = {
    [63667]  = true, -- Garalon
    [65501]  = true, -- Wind Lord Mel'jarak
    [66791]	= true,	-- Zorlok
-   
-   [62980]      = true, -- Imperial Vizier Zor'lok
-   [62543]      = true, -- Blade Lord Ta'yak
-   [62164]      = true, -- Garalon
-   [62397]      = true, -- Wind Lord Mel'jarak
-   [62511]      = true, -- Amber-Shaper Un'sok
-   [62837]      = true, -- Grand Empress Shek'zeer
 
    -------------------------------------------------------------------------------
    -- Hellfire Citadel: Hellfire Ramparts
@@ -762,13 +747,13 @@ local BossIDs = {
    [16063]	= true,	-- Sir Zeliek
 
    -------------------------------------------------------------------------------
-   -- Siege of Niuzao Temple (MoP-Dungeon 5.0.1)
+   -- Nizuao Temple (MoP-Dungeon 5.0.1)
    -------------------------------------------------------------------------------
 
-   [61634]	= true,	--  Commander Vo'jak
-   [61567]	= true,	--  Vizier Jin'bak
-   [62205]	= true,	--  Wing Leader Ner'onok
-   [61485]	= true,	--  General Pa'valak
+   [61634]	= true,	--  Vojak
+   [61567]	= true,	--  Jinbak
+   [62205]	= true,	--  Neronok
+   [61485]	= true,	--  Pavalak
 
    -------------------------------------------------------------------------------
    -- Obsidian Sanctum
@@ -799,11 +784,6 @@ local BossIDs = {
    [11519]	= true,	-- Bazzalan
    [11520]	= true,	-- Taragaman the Hungerer
    [17830]	= true,	-- Zelemar the Wrathful
-   [61412]	= true,	-- Dark Shaman Koranthal
-   [61408]	= true,	-- Adarogg
-   [61463]	= true,	-- Slagmaw
-   [61528]	= true,	-- Lava Guard Gordoth
-   
 
    -------------------------------------------------------------------------------
    -- Razorfen Downs
@@ -895,9 +875,7 @@ local BossIDs = {
    [10506]	= true,	-- Kirtonos the Herald
    [14695]	= true,	-- Lord Blackwood (Scourge Invasion)
    [10503]	= true,	-- Jandice Barov
-   [59184]	= true,	-- Jandice Barov
    [11622]	= true,	-- Rattlegore
-   [59153]	= true,	-- Rattlegore
    [14516]	= true,	-- Death Knight Darkreaver
    [10433]	= true,	-- Marduk Blackpool
    [10432]	= true,	-- Vectus
@@ -910,10 +888,8 @@ local BossIDs = {
    [10504]	= true,	-- Lord Alexei Barov
    [10502]	= true,	-- Lady Illucia Barov
    [1853]	= true,	-- Darkmaster Gandling
-   [59080]	= true,	-- Darkmaster Gandling
    [58633]  = true, -- Instructor Chillheart (MoP Heroic)
    [59200]  = true, -- Lilian Voss (MoP Heroic)
-   [58722]  = true, -- Lilian Voss (MoP Heroic)
 
    -------------------------------------------------------------------------------
    -- Searing Gorge
@@ -927,8 +903,6 @@ local BossIDs = {
    [56747]  = true, -- Gu Cloudstrike
    [56884]  = true, -- Taran Zhu
    [64387]  = true, -- Master Snowdrift
-   [56541]  = true, -- Master Snowdrift
-   [60007]  = true, -- Master Snowdrift
 
    -------------------------------------------------------------------------------
    -- Shadowfang Keep
@@ -953,6 +927,43 @@ local BossIDs = {
    [17711]	= true,	-- Doomwalker
 
    -------------------------------------------------------------------------------
+   -- Siege of Orgrimmar
+   -------------------------------------------------------------------------------
+   -- Vale of Eternal Sorrows
+   [71543]    = true,    -- Immerseus
+   [71475]    = true,    -- Rook Stonetoe, The Fallen Protectors
+   [71479]    = true,    -- He Softfoot, The Fallen Protectors
+   [71480]    = true,    -- Sun Tenderheart, The Fallen Protectors
+   [72276]    = true,    -- Norushen, Amalgam of Corruption
+   [71734]    = true,    -- Sha of Pride
+   -- Gates of Retribution
+   [72249]    = true,    -- Galakras
+   [72311]  = true,  -- Varian (part of the Galakras encounter's trigger)
+   [72560]  = true,  -- Lor'Themar (His hair triggers the Galakras encounter)
+   [71466]    = true,    -- Iron Juggernaut
+   [71859]    = true,    -- Haromm, his Darkness exceeded only by his Shamanism
+   [71858]  = true,  -- Kardriss, his Shamanism exceeded only by his Darkness
+   [71515]    = true,    -- General Nazgrim
+   -- The Underhold
+   [71454]    = true,    -- Malkorak
+   [73720]    = true,    -- Mogu Spoils (Spoils of War)
+   [71512]  = true,  -- Mantid Spoils (Spoils of War)
+   [71529]    = true,    -- Thok the Bloodthirsty, her Thirst exceeded only by her Blood
+   -- Downfall
+   [71504]    = true,    -- Siegecrafter Blackfuse, his fuses exceeded only by his... wait...
+   [71591]  = true,  -- Automated Shredder (Part of the Siegecrafter fight... not sure if this is the trigger or just him)
+   [71152]  = true,  -- Skeer the Bloodseeker, <Paragon of the Klaxxi>
+   [71153]  = true,  -- Hisek the Swarmkeeper, <Paragon of the Klaxxi>
+   [71154]  = true,  -- Ka'roz the Locust, <Paragon of the Klaxxi>
+   [71155]  = true,  -- Korven the Prime, <Paragon of the Klaxxi>
+   [71156]  = true,  -- Kaz'tik the Manipulator, <Paragon of the Klaxxi>
+   [71157]  = true,  -- Xaril The POisoned Mind, <Paragon of the Klaxxi>
+   [71158]  = true,  -- Rik'kal the Dissector, <Paragon of the Klaxxi>
+   [71160]  = true,  -- Iyyokuk the Lucid, <Paragon of the Klaxxi> (71159 is Ghazrooki, weird isn't it?)
+   [71161]  = true,  -- Kil'ruk the Wind-Reaver, <Paragon of the Klaxxi>
+   [71865]    = true,    -- Garrosh Starscream, That's right. He was a Decepticon all this time
+   
+   -------------------------------------------------------------------------------
    -- Silithus
    -------------------------------------------------------------------------------
    [15205]	= true,	-- Baron Kazum <Abyssal High Council>
@@ -965,8 +976,8 @@ local BossIDs = {
    -- Stormstout Brewery (MoP Dungeon)
    -------------------------------------------------------------------------------
    [56717]  = true, -- Hoptallus
-   [56637]  = true, -- Ook-Ook
-   [59479]  = true, -- Yan-Zhu the Uncasked
+   [57963]  = true, -- Ook-Ook
+   [59479]  = true, -- Yan-Zhu the Unsacked
 
    -------------------------------------------------------------------------------
    -- Stormwind Stockade
@@ -1022,7 +1033,6 @@ local BossIDs = {
    [10435]	= true,	-- Magistrate Barthilas
    [10439]	= true,	-- Ramstein the Gorger
    [10440]	= true,	-- Baron Rivendare (Stratholme)
-   [45412]      = true, -- Lord Aurius Rivendare 
 
    -------------------------------------------------------------------------------
    -- Sunwell Plateau
@@ -1129,7 +1139,6 @@ local BossIDs = {
    -- Temple of the Jade Serpent (MoP-Dungeon 5.0.1)
    -------------------------------------------------------------------------------
    [56448]	= true, -- Wise Mari
---   [56843]      = true, -- Lorewalker Stonestep
    [58826]	= true, -- Zao Sunseeker /Library Event
    [59051]	= true, -- (Strife /Library Event
    [59726]	= true, -- (Anger) /Library Event
@@ -1145,7 +1154,6 @@ local BossIDs = {
    [60999]  = true, -- Sha of Fear
    [62442]  = true, -- Tsulong
    [63099]  = true, -- Lei Shi
-   [62983]  = true, -- Lei Shi
 
    -------------------------------------------------------------------------------
    -- The Bastion of Twilight
@@ -1269,9 +1277,6 @@ local BossIDs = {
    [70229]	= true,	-- Flaming Head <Head of Megaera>
    [70250]	= true,	-- Frozen Head <Head of Megaera>
    [70251]	= true,	-- Venomous Head <Head of Megaera>
-   [70212]	= true,	-- Flaming Head <Head of Megaera>
-   [70235]	= true,	-- Frozen Head <Head of Megaera>
-   [70247]	= true,	-- Venomous Head <Head of Megaera>
    [69712]	= true,	-- Ji-Kun
    -- Halls of Flesh-Shaping
    [68036]	= true,	-- Durumu the Forgotten

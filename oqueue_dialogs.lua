@@ -626,7 +626,7 @@ function oq.angry_lil_button(button)
                  oq.angry_lil_button_done( self._button )
                end
                self.ticker = self.ticker + 1 ;
-               self._button:GetFontString():SetFont( "Fonts\\FRIZQT__.TTF", 11 + 5*self.ticker ) ;
+               self._button:GetFontString():SetFont( OQ.FONT, 11 + 5*self.ticker ) ;
                if (self.ticker < 6) then
                  local cx = self._button:GetWidth() + 100 ;
                  local cy = self._button:GetHeight() + 100 ;
@@ -663,7 +663,7 @@ function oq.angry_lil_button(button)
                oq.setpos( self._button, 10, 10, 300, 200 ) ;
                self.center( self ) ;
                oq.timer( "leaveQ", 2.5, self.grow, true, self ) ;
-               self._button:GetFontString():SetFont( "Fonts\\FRIZQT__.TTF", 11 ) ;
+               self._button:GetFontString():SetFont( OQ.FONT, 11 ) ;
              end ;
     f.leaveQ = function(self)
                  oq.timer( "leaveQ", 2.5, nil ) ;
