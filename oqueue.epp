@@ -66,11 +66,11 @@ ProjectStatus=0
 RelativeFilename=oqueue.toc
 Filename=E:\wow\Interface\AddOns\oqueue\oqueue.toc
 FTPFilename=
-ForcedReadOnly=0
+ForcedReadOnly=2
 
 [File2]
 DataLen=16745
-TopLine=39
+TopLine=317
 SelStart=0
 SelStop=0
 RectSel=0
@@ -763,8 +763,8 @@ FTPFilename=
 ForcedReadOnly=0
 
 [File21]
-DataLen=773385
-TopLine=90
+DataLen=773413
+TopLine=89
 SelStart=2659
 SelStop=2659
 RectSel=0
@@ -777,15 +777,15 @@ RectSelAlt=0
 CaretPosAlt=0
 CaretVisibleAlt=0
 BookmarkCount=10
-Bookmark1=693879
-Bookmark2=760372
-Bookmark3=459894
-Bookmark4=424522
+Bookmark1=81492
+Bookmark2=180842
+Bookmark3=178166
+Bookmark4=424550
 Bookmark5=-1
-Bookmark6=761342
-Bookmark7=435454
-Bookmark8=535685
-Bookmark9=257415
+Bookmark6=761370
+Bookmark7=435482
+Bookmark8=535713
+Bookmark9=257443
 Folding=
 FileType=768632589
 DataFormat=utf8
@@ -1250,12 +1250,12 @@ FTPFilename=
 ForcedReadOnly=0
 
 [File34]
-DataLen=53020
+DataLen=53071
 TopLine=0
-SelStart=2987
-SelStop=2987
+SelStart=72
+SelStop=72
 RectSel=0
-CaretPos=2987
+CaretPos=72
 CaretVisible=1
 TopLineAlt=0
 SelStartAlt=0
@@ -1287,7 +1287,7 @@ ForcedReadOnly=0
 [EditPad Project]
 Managed=1
 BookmarksProjectWide=0
-TabIndex=34
+TabIndex=21
 FirstFileTab=0
 FileCount=35
 RemovedCount=2

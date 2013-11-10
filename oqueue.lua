@@ -103,8 +103,8 @@ end
 
 local OQ_MAJOR                 = 1 ;
 local OQ_MINOR                 = 6 ;
-local OQ_REVISION              = 2 ;
-local OQ_BUILD                 = 162 ;
+local OQ_REVISION              = 3 ;
+local OQ_BUILD                 = 163 ;
 local OQ_SPECIAL_TAG           = "" ;
 local OQUEUE_VERSION           = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) ..".".. OQ_REVISION ;
 local OQUEUE_VERSION_SHORT     = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) .."".. OQ_REVISION ;
@@ -4047,6 +4047,7 @@ function oq.bump_scorekeeper()
               oq.salt() ;
 
   oq.send_to_scorekeeper( msg ) ;
+  oq.timer_oneshot( 10, oq.req_karma, "player" ) ;
 end
 
 function oq.send_top_dps( tops, submit_token, bg, crc )
@@ -5532,7 +5533,11 @@ function oq.update_bn_friend_info( friendId )
     -- new bnet friend
     oq._bnet_friends[_f[3]] = true ;
   end
-  
+  local p_faction = 0 ; -- 0 == horde, 1 == alliance, -1 == offline
+  if (player_faction == "A") then
+    p_faction = 1 ;
+  end
+ 
   if ((_f[4] == true) and (_f[3]) and oq.is_banned( _f[3], true )) then -- will only remove if on your LOCAL oq ban list
     local now = oq.utc_time() ;
     if (oq._banlist_detection == nil) then
@@ -5615,10 +5620,6 @@ function oq.bntoons()
     v.presenceID = 0 ;
     v.isOnline   = nil ;
     v.oq_enabled = nil ;
-  end
-  local p_faction = 0 ; -- 0 == horde, 1 == alliance, -1 == offline
-  if (player_faction == "A") then
-    p_faction = 1 ;
   end
 
   for friendId=ntotal,1,-1 do

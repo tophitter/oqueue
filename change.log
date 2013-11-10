@@ -1,4 +1,5 @@
 ﻿change.log for oQueue
+v1.6.3  BUGFIX: p_faction moved into friend-check
 
 v1.6.2  BUGFIX: you can now log between characters on different factions and the premade list will remain
         BUGFIX: insured popup menu when inviting was on top
