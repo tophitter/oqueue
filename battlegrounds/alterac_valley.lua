@@ -99,8 +99,8 @@ local function get_score()
   if (line1 == nil) or (line2 == nil) then
     return scores["alliance"], scores["horde"] ;
   end
-  local ally  = tonumber(line1:match( "Reinforcements: (%d+)" )) ;
-  local horde = tonumber(line2:match( "Reinforcements: (%d+)" )) ;
+  local ally  = tonumber(line1:match( OQ.BG_AV_POINTS_REGEX )) ;
+  local horde = tonumber(line2:match( OQ.BG_AV_POINTS_REGEX )) ;
   return ally or 500, horde or 500 ;
 end
 

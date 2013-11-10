@@ -106,7 +106,9 @@ local function get_score()
   if (line1 == nil) or (line2 == nil) then
     return 0,0 ;
   end
-  return line1:match( "Resources: (%d+)" ), line2:match( "Resources: (%d+)" ) ;
+  local bases1, points1 = line1:match( OQ.BG_AB_POINTS_REGEX ) ;
+  local bases2, points2 = line2:match( OQ.BG_AB_POINTS_REGEX ) ;
+  return points1, points2 ;
 end
 
 local function get_basecount()

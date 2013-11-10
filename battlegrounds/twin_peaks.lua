@@ -55,7 +55,7 @@ local function get_score()
   if (AlwaysUpFrame1Text ~= nil) then
     local line1 = AlwaysUpFrame1Text:GetText() ;
     if (line1 ~= nil) then
-      local tm = line1:match( "Remaining: (%d+)" ) ;  
+      local tm = line1:match( OQ.BG_TIME_REMAINING_REGEX ) ;  
       local dt = _tp_expire_tm - GetTime() ;
       tm = tonumber(tm) * 60 ;
       -- reset time if off by more then 120 seconds
