@@ -103,8 +103,8 @@ end
 
 local OQ_MAJOR                 = 1 ;
 local OQ_MINOR                 = 6 ;
-local OQ_REVISION              = 3 ;
-local OQ_BUILD                 = 163 ;
+local OQ_REVISION              = 5 ;
+local OQ_BUILD                 = 165 ;
 local OQ_SPECIAL_TAG           = "" ;
 local OQUEUE_VERSION           = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) ..".".. OQ_REVISION ;
 local OQUEUE_VERSION_SHORT     = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) .."".. OQ_REVISION ;
@@ -142,7 +142,7 @@ local OQ_MIN_ATOKEN_RELAY_TM   = 30 ; -- do not relay atokens more then once eve
 local OQ_MAX_HONOR_WARNING     = 3600 ;
 local OQ_MAX_HONOR             = 4000 ;
 local OQ_MAX_SUBMIT_ATTEMPTS   = 20 ;
-local OQ_MAX_WAITLIST          = 40 ;
+local OQ_MAX_WAITLIST          = 30 ;
 local OQ_TOTAL_BGS             = 10 ;
 local OQ_MIN_RUNAWAY_TM        = 40 ; 
 local OQ_MIN_CONNECTION        = 20 ;
@@ -2287,12 +2287,19 @@ function oq.dump_statistics()
     print( "  my_region        : ".. tostring(OQ.REGION) ) ;
   end
   print( "  my_realmlist     : ".. tostring(GetCVar("realmlist")) ) ;
-  print( "  my_realm         : ".. tostring(player_realm)  .." (".. tostring(oq.realm_cooked(player_realm)) ..")" ) ;
+  
+  if (player_realm == nil) then
+    print( "  my_realm          : ".. OQ_LILREDX_ICON .." |cFFFF8080unknown realm: ".. tostring(GetRealmName()) .."|r" ) ;
+  else
+    print( "  my_realm         : ".. tostring(player_realm)  .." (".. tostring(oq.realm_cooked(player_realm)) ..")" ) ;
+  end
+  
   if (player_realid == nil) then
     print( "  my_btag          : ".. OQ_LILREDX_ICON .." |cFFFF8080no battle-tag assigned|r" ) ;
   else
     print( "  my_btag          : ".. tostring( player_realid ) ) ;
   end
+  
   print( "  my_karma         : ".. tostring( player_karma ) ) ;
   print( "  my_role          : ".. tostring( OQ.ROLES[player_role] ) ) ;
   print( "  my_ilevel        : ".. oq.get_ilevel() ) ;
@@ -3082,7 +3089,7 @@ function oq.flag_watcher()
     s = OQ_toon.stats["rbg"] ;
   end
 
-  if (nplayers >= 10) then -- just incase the GetBattlefieldScore was wonky
+  if (nplayers > 10) then -- just incase the GetBattlefieldScore was wonky
     for i,e in pairs(_enemy) do
       if (e.last_seen ~= nil) then
         if (e.last_seen ~= now) and (e.reported == nil) then
@@ -3959,7 +3966,7 @@ end
 function oq.on_karma( token, btag, karma, vlist, sk_time )
   _ok2relay  = nil ;
   if (not oq.is_my_token( token )) then  -- not my token, bogus msg
-    return ;
+--    return ;
   end
   karma = tonumber(karma) ;
   btag  = strlower(btag) ;
@@ -5732,6 +5739,7 @@ function oq.n_connections()
   if (oq.loaded) then
     oq.tab2_nfriends:SetText( string.format( OQ.BNET_FRIENDS, nBNfriends ) ) ; 
     oq.tab2_connection:SetText( string.format( OQ.CONNECTIONS, nOQlocals, nOQfriends )) ;
+    oq.waitlist_nfriends:SetText( string.format( OQ.BNET_FRIENDS, nBNfriends ) ) ; 
   end
 end
 
@@ -6380,12 +6388,13 @@ function oq.remove_dead_premades()
   end
   
   local now = oq.utc_time() ;
+  local dt = floor(OQ_PREMADE_STAT_LIFETIME/2) ;
   _source = "cleanup" ;
   for i,v in pairs(oq.premades) do
     -- don't remove my own premade
     if (v.raid_token ~= oq.raid.raid_token) then
       -- time since last update 
-      if ((now - v.tm) > OQ_PREMADE_STAT_LIFETIME) then
+      if ((now - v.tm) > dt) then
         oq.remove_premade( v.raid_token ) ;
       end
     end
@@ -7055,7 +7064,6 @@ function oq.send_req_waitlist( raid_token, pword )
     local class, spec, spec_id = oq.get_spec() ;
     local stats = oq.encode_my_stats( 0, 0, 0, 'A', 'A' ) ;
     local enc_data = oq.encode_data( "abc123", player_name, player_realm, player_realid ) ;
-
     oq.realid_msg( raid.leader, raid.leader_realm, raid.leader_rid, 
                    OQ_MSGHEADER .."".. 
                    OQ_VER ..","..
@@ -7620,6 +7628,7 @@ function oq.InviteUnit( name, realm )
   else
     InviteUnit( name .."-".. realm ) ;
   end
+  next_invite_tm = 0 ; -- able to invite another player now
 end
 
 local _ninvites = 0 ;
@@ -7657,7 +7666,7 @@ function oq.invite_group_leader( req_token, group_id )
   end
 
   _ninvites = _ninvites + 1 ;
-  oq.timer( "invite_to_group".. _ninvites, 2, oq.timer_invite_group, true, req_token, msg, true ) ;
+  oq.timer( "invite_to_group".. _ninvites, 1, oq.timer_invite_group, true, req_token, msg, true ) ;
 end
 
 function oq.timer_invite_group( req_token, msg, is_lead )
@@ -7728,7 +7737,7 @@ function oq.timer_invite_group_member( name, realm, rid_, msg, group_id, slot_, 
   end
   
   oq.realid_msg( name, realm, rid_, msg ) ;
-  oq.timer_oneshot( 1.5, oq.InviteUnit, name, realm ) ;
+  oq.timer_oneshot( 1.0, oq.InviteUnit, name, realm ) ;
   oq.timer_oneshot( 3.5, oq.brief_group_members ) ;  
   oq.pending_invites[ name .."-".. realm ] = nil ;
   return true ; -- this will remove the timer
@@ -9390,7 +9399,7 @@ function oq.create_waitlist_item( parent, x, y, cx, cy, token, n_members )
                                                    if (now < next_invite_tm) then
                                                      return ;
                                                    end
-                                                   next_invite_tm = now + 4 ;
+--                                                   next_invite_tm = now + 4 ;
                                                    if (oq.raid.type == OQ.TYPE_RBG) or (oq.raid.type == OQ.TYPE_RAID) then
                                                      if (button == "LeftButton") then
                                                        -- right button should not work, as you cannot invite directly into a group
@@ -9417,7 +9426,7 @@ function oq.create_waitlist_item( parent, x, y, cx, cy, token, n_members )
                                                   if (now < next_invite_tm) then
                                                     return ;
                                                   end
-                                                  next_invite_tm = now + 4 ;
+--                                                  next_invite_tm = now + 4 ;
                                                   if (oq.raid.type == OQ.TYPE_RBG) or (oq.raid.type == OQ.TYPE_RAID) then
                                                     message( OQ.NOLEADS_IN_RAID ) ;
                                                   else
@@ -9440,7 +9449,7 @@ function oq.create_waitlist_item( parent, x, y, cx, cy, token, n_members )
                                                   if (now < next_invite_tm) then
                                                     return ;
                                                   end
-                                                  next_invite_tm = now + 5 ;
+--                                                  next_invite_tm = now + 5 ;
                                                   if (oq.raid.type == OQ.TYPE_RBG) or (oq.raid.type == OQ.TYPE_RAID) then
                                                     message( OQ.NOGROUPS_IN_RAID ) ;
                                                   else
@@ -10251,7 +10260,7 @@ function oq.create_bounty_board( parent )
   return b ;
 end
 
-OQ.CONTRACT_TARGETS = { [2] = { H = 69968, A = 69966 },
+OQ.CONTRACT_TARGETS = { [2] = { H = 71619, A = 71622 }, -- enthan and acon
                         [3] = { H = 19907, A = 19906 },
                         [4] = { H = 67801, A = 67461 },
                       } ; 
@@ -10293,7 +10302,9 @@ function oq.populate_npc_table()
   OQ.npc[50806] = L["Moldo One-Eye"] ; -- rare; eternal blossoms
   OQ.npc[50805] = L["Omnis Grinlok"] ; -- rare; pandaria
   OQ.npc[70101] = L["Armsmaster Holinka"] ; -- alli pvp vendor; four winds
+  OQ.npc[71620] = L["Armsmaster Holinka"] ; -- alli pvp vendor; four winds
   OQ.npc[70108] = L["Roo Desvin"] ; -- horde pvp vendor; four winds
+  OQ.npc[71618] = L["Roo Desvin"] ; -- horde pvp vendor; four winds
   OQ.npc[68000] = L["Hiren Loresong"] ; -- isle of thunder; alli quartermaster 
   OQ.npc[67672] = L["Vasarin Redmorn"] ; -- isle of thunder; horde quartermaster 
   OQ.npc[19907] = L["Grumbol Grimhammer"] ; -- alli AV battlemaster
@@ -10325,7 +10336,9 @@ function oq.populate_npc_table()
   OQ.npc[69967] = L["Lucan Malory"] ; -- conquest vendor; alli
   OQ.npc[71623] = L["Lucan Malory"] ; -- conquest vendor; alli
   OQ.npc[69966] = L["Acon Deathwielder"] ; -- glorious conquest vendor; horde
+  OQ.npc[71622] = L["Acon Deathwielder"] ; -- glorious conquest vendor; horde
   OQ.npc[69968] = L["Ethan Natice"] ; -- glorious conquest vendor; alliance
+  OQ.npc[71619] = L["Ethan Natice"] ; -- glorious conquest vendor; alliance
   OQ.npc[63978] = L["Kri'chon"] ; -- quest mob @ the wall
   OQ.npc[67461] = L["Warlord Bloodhilt"] ; -- horde keep boss in krasarang wilds
   OQ.npc[67801] = L["High Marshal Twinbraid"] ; -- alliance keep boss in krasarang wilds
@@ -10959,7 +10972,9 @@ function oq.toggle_filter( is_checked )
       oq._filter._text = OQ_data._filter_text ;
       b._edit:SetText( oq._filter._text or "" ) ;
       b._edit:Show() ;
-      b._edit:SetFocus() ;
+      if (OQ_data._was_filter_editing) then
+        b._edit:SetFocus() ;
+      end
     end
     OQ_data._filter_open = true ;
     OQ_data._was_filtering = true ;
@@ -11086,7 +11101,7 @@ function oq.create_filter_button( parent )
   if (OQ_data._filter_text ~= nil) then
     b._edit:SetText( OQ_data._filter_text ) ;
     b._edit:Show() ;
-    b:SetChecked(true) ;
+--    b:SetChecked(true) ;
   else
     b._edit:Hide() ;
   end
@@ -11098,11 +11113,19 @@ function oq.create_filter_button( parent )
             oq._filter:Click() ;
           end ) ;
 ]]--
+  b._edit:SetScript( "OnEditFocusGained", function(self) OQ_data._was_filter_editing = true ; end ) ;
+  b._edit:SetScript( "OnEditFocusLost"  , function(self) OQ_data._was_filter_editing = nil  ; end ) ;
   b._edit:SetScript( "OnTextChanged"  , function(self) oq.update_filter(self:GetText()) ; end ) ;
 
-  b:SetScript( "OnClick", function(self) oq.toggle_filter( self:GetChecked() ) ; end ) ;
+  b:SetScript( "OnClick", function(self) 
+                            oq.toggle_filter( self:GetChecked() ) ; 
+                            if (oq._filter._edit:IsVisible()) then 
+                              oq._filter._edit:SetFocus() ; 
+                            end 
+                          end ) ;
 
-  b:SetChecked(nil) ;
+  b:SetChecked(OQ_data._filter_open) ;
+
   b._edit:Hide() ;
   b:Hide() ;
   
@@ -12410,7 +12433,7 @@ function oq.create_tab3()
   end
   
   -- create/update button
-  oq.tab3_create_but     = oq.button2( OQTabPage3, OQTabPage3:GetWidth() - 250, OQTabPage3:GetHeight() - 80, 150, 45, OQ.CREATE_BUTTON, 14,
+  oq.tab3_create_but     = oq.button2( OQTabPage3, OQTabPage3:GetWidth() - 250, OQTabPage3:GetHeight() - 70, 150, 45, OQ.CREATE_BUTTON, 14,
                                       function(self) oq.tab3_create_activate() ; end 
                                     ) ;
   oq.tab3_create_but.string:SetFont(OQ.FONT, 14, "") ;
@@ -12480,6 +12503,17 @@ function oq.create_tab_waitlist()
   parent.header3 = f ;
   f = oq.click_label( parent, x+185, y,  40, cy, OQ.HDR_TIME ) ;  
   f:SetScript("OnClick", function(self) oq.sort_waitlist( "time" ) ; end ) ;
+
+  -- invite-all button
+  x = parent:GetWidth() - 135 ;
+  y = parent:GetHeight() - 30 ;
+  f = oq.button2( parent, x, y-4, 90, 24, OQ.BUT_INVITE_ALL, 14, function(self) oq.waitlist_invite_all() ; end ) ;
+  f.string:SetFont(OQ.FONT, 10, "") ;
+  oq.waitlist_inviteall_button = f ;
+
+  x = x - (150 + 8) ;
+  oq.waitlist_nfriends = oq.label( parent, x, y, 150, cy, string.format( OQ.BNET_FRIENDS, 0 ) ) ; 
+  oq.waitlist_nfriends:SetJustifyH("right") ;
 
   -- add samples
   oq.tab7_waitlist = tbl.new() ;
@@ -12863,8 +12897,9 @@ function oq.create_ui_shade()
   f:SetBackdropColor( 0.2, 0.2, 0.2, 0.75 ) ;
   f:SetFrameLevel( 125 ) ;
   f:EnableMouse(true) ;
-  f:SetScript( "OnShow", function(self) oq.onShadeShow(self) ; end ) ;
-  f:SetScript( "OnHide", function(self) oq.onShadeHide(self) ; end ) ;
+  f:SetScript( "OnShow", function(self) if (self._locked == nil) then oq.onShadeShow(self) ; end end ) ;
+  f:SetScript( "OnHide", function(self) if (self._locked == nil) then oq.onShadeHide(self) ; end end ) ;
+  f._child = nil ;
   oq.onShadeShow(f) ; -- first time
   oq.ui_shade = f ;
 
@@ -12876,34 +12911,28 @@ function oq.create_ui_shade()
   return oq.ui_shade ;
 end
 
-function oq.badtag_shade()
+function oq.shaded_dialog( child, is_locked ) 
   local shade  = oq.create_ui_shade() ;
-  local badtag = oq.create_badtagbox( shade ) ; -- place contribution dialog  
-  if (shade._beg ) then shade._beg :Hide() ; end 
-  if (shade._help) then shade._help:Hide() ; end 
-
-  -- remove normal shade functions
-  shade:SetScript( "OnShow", function(self) end ) ;
-  shade:SetScript( "OnHide", function(self) end ) ;
-  -- remove esc to clear
-  oq.onShadeHide(shade) ;
-
+  if (shade._child ~= nil) then
+    shade._child:Hide() ;
+  end
+  shade._child = child ; 
+  shade._locked = is_locked ;
+  child:Show() ;
+  if (is_locked) then
+    -- remove esc to clear
+    oq.onShadeHide(shade) ;
+  end
   shade:Show() ;
+  return shade ;  
+end
+
+function oq.badtag_shade()
+  oq.shaded_dialog( oq.create_badtagbox( oq.create_ui_shade() ), true ) ;
 end
 
 function oq.banned_shade()
-  local shade  = oq.create_ui_shade() ;
-  local banned = oq.create_banbox( shade ) ; -- place contribution dialog  
-  if (shade._beg ) then shade._beg :Hide() ; end 
-  if (shade._help) then shade._help:Hide() ; end 
-
-  -- remove normal shade functions
-  shade:SetScript( "OnShow", function(self) end ) ;
-  shade:SetScript( "OnHide", function(self) end ) ;
-  -- remove esc to clear
-  oq.onShadeHide(shade) ;
-
-  shade:Show() ;
+  oq.shaded_dialog( oq.create_banbox( oq.create_ui_shade() ), true ) ;
 end
 
 function oq.contribute_shade()
@@ -12913,20 +12942,12 @@ function oq.contribute_shade()
   -- will have links to contribution pages
   -- solidice:   https://solidice.com/oqueue/contribute.html
   -- public vent:  http://donate.publicvent.org/
-  local shade = oq.create_ui_shade() ;
-  local beg   = oq.create_begbox( shade ) ; -- place contribution dialog  
-  if (shade._help) then shade._help:Hide() ; end 
-  if (shade._beg ) then shade._beg :Show() ; end 
-  shade:Show() ;
+  oq.shaded_dialog( oq.create_begbox( oq.create_ui_shade() ), nil ) ;
 end
 
 function oq.help_shade()
-  local shade = oq.create_ui_shade() ;
-  local help  = oq.create_helpbox( shade ) ; -- place contribution dialog  
-  if (shade._beg ) then shade._beg :Hide() ; end 
-  if (shade._help) then shade._help:Show() ; end 
+  oq.shaded_dialog( oq.create_helpbox( oq.create_ui_shade() ), nil ) ;
   OQ_data._helper_intro_shown = 1 ;
-  shade:Show() ;
 end
 
 function oq.place_tag( parent )
@@ -13757,23 +13778,8 @@ function oq.populate_tab3()
   local now = oq.utc_time() ;
   if (OQ_toon.tab3_notice == nil) or (OQ_toon.tab3_notice < now) then
     -- notice
+    oq.shaded_dialog( oq.create_tab3_notice( oq.create_ui_shade() ), nil ) ;
     OQ_toon.tab3_notice = now + 7*24*60*60 ; -- once per week
-    if (oq.ui_tab3_shade == nil) then
-      oq.ui_tab3_shade = oq.create_tab3_shade( OQTabPage3 ) ;
-    end
-    if (oq.ui_tab3_notice == nil) then
-      oq.ui_tab3_notice = oq.create_tab3_notice( oq.ui_tab3_shade ) ;
-      oq.ui_tab3_shade:SetScript( "OnShow", function(self) oq.onShadeShow(self) ; end ) ;
-      oq.ui_tab3_shade:SetScript( "OnHide", function(self) oq.onShadeHide(self) ; end ) ;
-      oq.onShadeShow(oq.ui_tab3_shade) ; -- first time
-    end
-    oq.ui_tab3_shade:Show() ;
-    if (oq.ui_tab3_warning) then oq.ui_tab3_warning:Hide() ; end
-    oq.ui_tab3_notice:Show() ;    
-  elseif (oq.ui_tab3_shade ~= nil) and (oq.ui_tab3_shade:IsVisible()) then
-    oq.ui_tab3_shade:Hide() ;
-    if (oq.ui_tab3_notice) then oq.ui_tab3_notice:Hide() ; end
-    if (oq.ui_tab3_warning) then oq.ui_tab3_warning:Hide() ; end
   end
 end
 
@@ -13784,8 +13790,6 @@ function oq.populate_tab_setup()
   if (_oqgeneral_id) then
     SetSelectedDisplayChannel( _oqgeneral_id ) ;
   end
-  
---  oq.populate_dtime() ;
 end
 
 function oq.onhide_tab_setup()
@@ -14141,7 +14145,7 @@ function oq.on_proxy_invite( group_id, slot_, enc_data_, req_token_ )
   if (realm == player_realm) then
     -- on my realm, let player know he's in my group then invite him
     oq.realid_msg( name, realm, rid_, msg ) ;
-    oq.timer_oneshot( 1.5, oq.InviteUnit, name, realm ) ;
+    oq.timer_oneshot( 1.0, oq.InviteUnit, name, realm ) ;
     oq.timer_oneshot( 2.5, oq.brief_group_members ) ;  
     return ;
   end
@@ -14155,7 +14159,7 @@ function oq.on_proxy_invite( group_id, slot_, enc_data_, req_token_ )
   local pid = oq.bnpresence( name .."-".. realm ) ;
   if (pid ~= 0) then
     oq.realid_msg( name, realm, rid_, msg ) ;
-    oq.timer_oneshot( 1.5, oq.InviteUnit, name, realm ) ;
+    oq.timer_oneshot( 1.0, oq.InviteUnit, name, realm ) ;
     oq.timer_oneshot( 2.5, oq.brief_group_members ) ;  
     return ;
   end
@@ -15308,6 +15312,18 @@ function oq.on_premade( raid_tok, raid_name, premade_info, enc_data, bgs_, type_
     _ok2relay = nil ;
   end
 end
+
+OQ.DRIFT_MAX     = 5 * 60 ;
+function oq.check_drift( dt )
+  oq.pkt_drift:push( dt, true ) ;
+  if (oq.pkt_drift._mean > OQ.DRIFT_MAX) then
+    local pure_now = oq.utc_time( "pure" ) ;
+    if (OQ_data._karma_last_tm == nil) or (abs(OQ_data._karma_last_tm - pure_now) > 60*60) then
+      oq.req_karma( "player" ) ;
+      OQ_data._karma_last_tm = pure_now ;
+    end
+  end
+end
   
 function oq.process_premade_info( raid_tok, raid_name, faction, level_range, ilevel, resil, mmr, enc_data, 
                                   bgs_, nMem, is_source, tm_, status_, nWait, has_pword, 
@@ -15324,7 +15340,9 @@ function oq.process_premade_info( raid_tok, raid_name, faction, level_range, ile
   if (lead_name == nil) or (lead_realm == nil) or (lead_rid == nil) then
     return ;
   end
-  if (abs(now - tm_) >= OQ_PREMADE_STAT_LIFETIME) then
+  local dt = abs(now - tm_) ;
+  oq.check_drift(dt) ;
+  if (dt >= OQ_PREMADE_STAT_LIFETIME) then
     -- premade leader's time is off.  ignore
     _ok2relay = nil ;
     return ;
@@ -15683,6 +15701,12 @@ function oq.on_req_invite( raid_token, raid_type, n_members_, req_token, enc_dat
   end
 
   -- check to see if the toon is already queue'd
+  if (oq.is_waitlisted( name_, realm_ )) then
+    oq.send_invite_response( name_, realm_, realid_, raid_token, req_token, "Y" ) ;  
+    tbl.delete( m ) ;
+    return ;
+  end
+  
   if (not oq.ok_for_waitlist( name_, realm_ )) then
     tbl.delete( m ) ;
     return ;
@@ -15822,15 +15846,40 @@ function oq.on_imesh( token, btag )
   end
 end
 
-function oq.ok_for_waitlist( name, realm )
-  -- check to see if the toon is already queue'd
+function oq.is_waitlisted( name, realm )
   for i,v in pairs(oq.waitlist) do
     if ((name == v.name) and (realm == v.realm)) then
-      return nil ;
+      return true ;
     end
   end
-  -- or already in the group
-  
+  return nil ;
+end
+
+function oq.waitlist_invite_all()
+  if (oq.waitlist_inviteall_button == nil) then
+    return ; --  ??
+  end
+  if (not oq.iam_raid_leader()) then
+    -- not possible
+    return ;
+  end
+  oq.waitlist_inviteall_button:Disable() ;
+  oq.timer_oneshot( OQ_FINDMESH_CD, oq.enable_button, oq.waitlist_inviteall_button ) ;
+
+  local nfriends = select( 1, BNGetNumFriends() ) ;
+  if (nfriends < OQ.BNET_CAPB4THECAP) then
+    for req_token,v in pairs(oq.waitlist) do
+      oq.group_invite_first_available( req_token ) ;
+      nfriends = nfriends + 1 ;
+      if (nfriends >= OQ.BNET_CAPB4THECAP) then
+        break ;
+      end
+    end  
+  end
+end
+
+function oq.ok_for_waitlist( name, realm )
+  -- check to see if the toon is already in the group  
   for i=1,8 do
     for j=1,5 do
       local mem = oq.raid.group[i].member[j] ;
@@ -16114,7 +16163,8 @@ function oq.get_model_standin( gender, race )
     fname = fname .."\\Female" ;
     base = base .."Female" ;
   end
-  return fname .."\\".. base ..".m2" ;  
+  return nil ;
+--  return fname .."\\".. base ..".m2" ;  
 end
 
 function oq.is_dungeon_premade( m )
@@ -16336,13 +16386,15 @@ function oq.get_model( parent, name, gender, race )
                                     self._standin = 0 ;
                                   end
     oq._models[key].use_standin = function(self) 
-                                    self:SetModel( self._fname ) ;
-                                    self:SetCustomRace( OQ.WOW_RACE_ID[self._race], self._gender ) ;
-                                    self:Undress() ; -- want undressed model, just race and gender
-                                    self:SetAlpha(1.0) ;
-                                    self:SetLight(0) ; -- dark model; silhouette
-                                    self:adjust_frame() ;
-                                    self:Show() ;
+                                    if (self._fname) then
+                                      self:SetModel( self._fname ) ;
+                                      self:SetCustomRace( OQ.WOW_RACE_ID[self._race], self._gender ) ;
+                                      self:Undress() ; -- want undressed model, just race and gender
+                                      self:SetAlpha(1.0) ;
+                                      self:SetLight(0) ; -- dark model; silhouette
+                                      self:adjust_frame() ;
+                                      self:Show() ;
+                                    end
                                     self._standin = 1 ;
                                   end
     oq._models[key].update_cam = function(self)
@@ -22380,6 +22432,10 @@ end
 
 function OQ_buttonLoad(self)
   oq.mini = self ;
+end
+
+function OQ_UI_Toggle()
+  oq.ui_toggle() ;
 end
 
 OQ.minimap_menu_options = { 

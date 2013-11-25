@@ -17,7 +17,7 @@ OQPacket = {} ;
 
 function OQPacket:new() 
   local o = {} ;
-  o._vars = {} ;
+  o._vars = {} ; 
   o._source = nil ;
   o._sender = nil ;
   o._pkt    = nil ;

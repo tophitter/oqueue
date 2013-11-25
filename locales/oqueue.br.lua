@@ -245,7 +245,7 @@ OQ.LABEL_RAID       = "raide" ;
 OQ.LABEL_SCENARIO   = "cenario" ;
 OQ.LABEL_CHALLENGE  = "desafio" ;
 OQ.PATTERN_CAPS     = "[ABCDEFGHIJKLMNOPQRSTUVWXYZ]" ;
-OQ.CONTRIBUTE       = "d'oh!" ;
+OQ.CONTRIBUTE       = "send beer!" ;
 OQ.CONTRIBUTION_DLG = { "",
                         "Por favor, ajude a comunidade do oQueue",
                         "",

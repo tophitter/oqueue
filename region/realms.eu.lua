@@ -12,7 +12,7 @@
 local addonName, OQ = ... ;
 
 if (string.sub(GetCVar("realmList"),1,2) == "eu") then
-
+ 
 OQ.REGION   = "eu" ;
 OQ.SK_BTAG  = "OQSK#2404" ;
 OQ.SK_NAME  = "Scorekeeper" ;
@@ -48,6 +48,7 @@ OQ.BGROUP_ICON = { ["Blackout"    ] = "Interface\\Icons\\Spell_Shadow_Gathershad
                  } ;
 
 OQ.REALMNAMES_SPECIAL = { 
+  ["Al'akir"             ] = "Al'Akir",
   ["ConseildesOmbres"    ] = "Conseil des Ombres",
   ["DerRatvonDalaran"    ] = "Der Rat von Dalaran",
   ["KultderVerdammten"   ] = "Kult der Verdammten",
@@ -1244,4 +1245,8 @@ OQ.SHORT_BGROUPS = {
                 ["Ревущий фьорд"] = 373,
                 ["Седогрив"] = 374,
                 ["Ткач Смерти"] = 375,} ;
+
+
+OQ.gbl = { ["scintilla#2342"   ] = "exploiting",  -- OQ exploiter; eu-yt
+         } ;
 end

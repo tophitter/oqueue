@@ -34,13 +34,17 @@ function PacketStatistics:new( max_cnt )
       o.array[i]._x = nil ;
       o.array[i]._tm = nil ;
    end
-   o._n   = 0 ;
-   o._aps = 0 ;
-   o._dt  = 0 ;
+   o._n    = 0 ;
+   o._aps  = 0 ;
+   o._dt   = 0 ;
+   o._mean = 0 ;
    setmetatable(o, { __index = PacketStatistics }) ;
    return o ;
 end
 
+--
+-- used for averaging event times
+--
 function PacketStatistics:avg()
    local t1 = nil ; 
    local t2 = nil ; 
@@ -68,26 +72,60 @@ function PacketStatistics:avg()
    self._dt  = t2 - t1 ;
    if (self._dt > 0) then
       self._aps = (n2 - n1) / self._dt ;
-   end
+   end 
    return self._aps ;
 end
 
+function PacketStatistics:mean()
+  local n = 0 ;
+  local sum = 0 ;
+  for i=1,self._max do
+    if (self.array[i]._x ~= nil) then
+      n   = n + 1 ;
+      sum = sum + self.array[i]._x ;
+    end
+  end
+  if (n == 0) then
+    self._mean = 0 ;
+  else
+    self._mean = sum / n ;
+  end
+end
+
+function PacketStatistics:reset() 
+  self._cnt = 0 ;
+  for i=1,self._max do
+    self.array[i]._x = nil ;
+    self.array[i]._tm = nil ;
+  end
+  self._n    = 0 ;
+  self._cnt  = 0 ;
+  self._aps  = 0 ;
+  self._dt   = 0 ;
+  self._mean = 0 ;
+end 
+
 function PacketStatistics:inc()
-  self._cnt = self._cnt + 1 ;
   self:push( self._cnt ) ;
 end
 
-function PacketStatistics:push( x ) 
-   for i=self._max,2,-1 do
-      self.array[i]._x  = self.array[i-1]._x  ;
-      self.array[i]._tm = self.array[i-1]._tm ;
-   end
-   self.array[1]._x  = x ;
-   self.array[1]._tm = GetTime() ;
+function PacketStatistics:push( x, use_mean ) 
+  self._cnt = self._cnt + 1 ;
+  for i=self._max,2,-1 do
+    self.array[i]._x  = self.array[i-1]._x  ;
+    self.array[i]._tm = self.array[i-1]._tm ;
+  end
+  self.array[1]._x  = x ;
+  self.array[1]._tm = GetTime() ;
+  if (use_mean) then
+   self:mean() ;
+  else
    self:avg() ;
+  end
 end
 
 oq.pkt_sent      = PacketStatistics:new(10) ; 
 oq.pkt_recv      = PacketStatistics:new(10) ; 
 oq.pkt_processed = PacketStatistics:new(10) ; 
+oq.pkt_drift     = PacketStatistics:new(20) ; 
 

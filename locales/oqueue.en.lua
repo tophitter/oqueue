@@ -21,6 +21,8 @@ end
 setmetatable(OQ._T, {__index=defaultFunc}) ;
 local L = OQ._T ;
 
+BINDING_HEADER_OQUEUE = "oQueue";
+BINDING_NAME_TOGGLE_OQUEUE = "Toggle oQueue";
 
 OQ.TITLE_LEFT         = "oQueue v" ;
 OQ.TITLE_RIGHT        = " - Premade finder" ;
@@ -51,6 +53,7 @@ OQ.BUT_FINDMESH       = "find mesh" ;
 OQ.BUT_SUBMIT2MESH    = "submit b-tag" ;
 OQ.BUT_PULL_BTAG      = "remove b-tag" ;
 OQ.BUT_BAN_BTAG       = "ban b-tag" ;
+OQ.BUT_INVITE_ALL     = "invite all" ;
 OQ.TT_LEADER          = "leader" ;
 OQ.TT_REALM           = "realm" ;
 OQ.TT_BATTLEGROUP     = "battlegroup" ;

@@ -636,7 +636,7 @@ function oq.pm_tooltip_create()
                         insets = { left = 4, right = 3, top = 4, bottom = 3 }
                       }
   end
-  pm_tooltip:SetBackdrop( oq.__backdrop23 ) ;
+  pm_tooltip:SetBackdrop( oq.__backdrop23 ) ; 
 
   pm_tooltip.emphasis_texture = pm_tooltip:CreateTexture( nil, "BORDER" ) ;
   pm_tooltip.emphasis_texture:SetTexture( "" ) ;

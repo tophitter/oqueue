@@ -7,7 +7,7 @@
        enableMouse="true"
        hidden="false"
        parent="UIParent">
-       <Size>
+       <Size> 
            <AbsDimension x="800" y="425"/>
        </Size>
        <Anchors>

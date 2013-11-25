@@ -1,5 +1,21 @@
 ﻿change.log for oQueue
-v1.6.3  BUGFIX: p_faction moved into friend-check
+
+v1.6.5  BUGFIX: karma will now be received
+        BUGFIX: contract mini-game targets updated
+        UPD: message shades improved
+        UPD: tweaked various contract target ids
+        UPD: reduced the time between invites for those trying to spam-invite for raids
+        UPD: changed max wait list from 40 to 30
+        UPD: removed silhoutte from premade panels.  only class colors now
+        UPD: premade filter now requires click to take focus (was taking focus when opened)
+        add: auto-correcting time drift
+        add: invalid realm names will now be shown under 'stats'
+        add: 'invite all' for wait list tab; will stop inviting @ the cap-before-the-cap (thx ezoverdose!)
+        add: oQueue key binding entry (wow-menu/key bindings/oQueue) to toggle the ui
+
+v1.6.4  *skipping to insure all beta testers get the update notice
+
+v1.6.3  BUGFIX: p_faction moved into friend-check 
 
 v1.6.2  BUGFIX: you can now log between characters on different factions and the premade list will remain
         BUGFIX: insured popup menu when inviting was on top

@@ -237,7 +237,7 @@ OQ.LABEL_DUNGEON = "Dungeon" ;
 OQ.LABEL_RAID = "Raid" ;
 OQ.LABEL_SCENARIO = "Szenario" ;
 OQ.PATTERN_CAPS = "[ABCDEFGHIJKLMNOPQRSTUVWXYZ]" ; --ÄÖÜ
-OQ.CONTRIBUTE = "d'oh!" ;
+OQ.CONTRIBUTE = "send beer!" ;
 OQ.CONTRIBUTION_DLG = { "",
 "Bitte hilf der oQueue Community",
 "",

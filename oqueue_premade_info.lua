@@ -245,7 +245,7 @@ function oq.get_raid_progression()
   flags = oq.bset( flags, 0x20, oq.has_completed( 8199 ) or oq.has_completed( 8200 ) ) ; -- Lei Shen
   tot = tot .."".. oq.encode_mime64_1digit( flags ) ;  
   
-  -- 10 and 25 man heroic
+  -- 10 and 25 man heroic  
   flags = 0 ;
   flags = oq.bset( flags, 0x01, oq.has_completed( 8144 ) or oq.has_completed( 8145 ) ) ; -- Jin'rokh the Breaker
   flags = oq.bset( flags, 0x02, oq.has_completed( 8151 ) or oq.has_completed( 8152 ) ) ; -- Horridon 

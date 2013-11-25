@@ -9,7 +9,7 @@
               if this file is posted to a web site, credit must be given to me along with a link to my web page
               no code in this file may be used in other works without expressed permission  
 ]]--
-local addonName, OQ = ... ;
+local addonName, OQ = ... ; 
 
 OQ.FONT = "Interface\\Addons\\oqueue\\fonts\\FRIZQT__.TTF" ;
 OQ.FONT2 = "Interface\\Addons\\oqueue\\fonts\\MORPHEUS.TTF" ;
@@ -344,19 +344,6 @@ OQ.QUEUE_STATUS = { ["none"   ] = "0",
                     ["4"      ] = "error",
                   } ;
 
-OQ.gbl = { ["tts#1959"         ] = "exploiting",  -- OQ exploiter
-           ["humiliation#1231" ] = "behavior"  ,  -- nazi symbol in OQ names
-           ["peaceandlove#1473"] = "behavior"  ,  -- bandit
-           ["mokkthemadd#1462" ] = "behavior"  ,  -- flamed out, hard
-           ["fr0st#1118"       ] = "behavior"  ,  -- n-word to scorekeeper
-           ["drunkhobo15#1211" ] = "exploiting",  -- exploit/hack
-           ["bradley#1957"     ] = "behavior"  ,  -- spamming the scorekeeper, douchery
-           ["thetcer#1446"     ] = "exploiting",  -- OQ exploiter
-           ["pawnstar#1571"    ] = "exploiting",  -- exploit helm; 'f-you f*ggot' - chumlee
-           ["cory#1801"        ] = "exploiting",  -- OQ exploiter; gold dragon
-           ["adolph#1897"      ] = "behavior"  ,  -- douchery; toolbag; RL name + c-word to insult player
-           ["flucz#1635"       ] = "behavior"  ,  -- douchery; "who the f* are you; n***a off my friends list;b*tch;dont pop enough molly for me;pussy;now;im gonna go f* yur betch;an pop molly" ... that's swell.  have a nice day
-           ["cscird#1889"      ] = "exploiting",  -- OQ exploiter; gold dragon
-           ["goddess#2851"     ] = "exploiting",  -- OQ exploiter; silver dragon (rbg)
+OQ.gbl = { -- moved to region specific
          } ;
 
