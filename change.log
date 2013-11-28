@@ -1,5 +1,10 @@
 ﻿change.log for oQueue
 
+v1.6.6  UPD: recycle wait list row frames
+        UPD: tz_adjust removed
+        UPD: removed all gmatch calls with fill_match (gmatch leaks?)
+        add: time drift now shown on the setup tab
+
 v1.6.5  BUGFIX: karma will now be received
         BUGFIX: contract mini-game targets updated
         UPD: message shades improved

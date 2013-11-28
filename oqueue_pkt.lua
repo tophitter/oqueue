@@ -10,7 +10,8 @@
               no code in this file may be used in other works without expressed permission  
 ]]--
 local addonName, OQ = ... ;
-local oq = OQ:mod() ; -- thank goodness i stumbled across this trick
+local oq  = OQ:mod() ; -- thank goodness i stumbled across this trick
+local tbl = OQ.table ;
 local _ ; -- throw away (was getting taint warning; what happened blizz?)
 
 OQPacket = {} ;
@@ -38,10 +39,7 @@ function OQPacket:parse( source, sender, str )
   self._source = source ;
   self._sender = sender ;
   self._pkt    = str ;
-  local v ;
-  for v in string.gmatch( str, "([^,]+)") do
-    table.insert( self._vars, v ) ;
-  end
+  tbl.fill_match( self._vars, str, "," ) ;
 end
 
 function OQPacket:msg_id()

@@ -152,6 +152,7 @@ OQ.SETUP_COLORBLIND   = "Color Blind Support" ;
 OQ.SAPPED             = "{rt8}  Sapped  {rt8}" ;
 OQ.BN_FRIENDS         = "OQ enabled friends" ;
 OQ.LOCAL_OQ_USERS     = "OQ enabled locals" ;
+OQ.TIME_DRIFT         = "time drift" ;
 OQ.PPS_SENT           = "pkts sent/sec" ;
 OQ.PPS_RECVD          = "pkts recvd/sec" ;
 OQ.PPS_PROCESSED      = "pkts processed/sec" ;

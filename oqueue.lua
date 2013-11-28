@@ -77,6 +77,27 @@ function tbl.fill( t, ... )
   end
 end
 
+function tbl.fill_match( t, str, ch )
+  local n = 0 ;
+  wipe(t) ;
+  local p1 = 0 ;
+  local p2 = 1 ;
+  if (str == nil) then return ; end   
+  for i=1,#str do
+    if (str:sub(i,i) == ch) then
+      p2 = i ;
+      n = n + 1 ;
+      t[n] = str:sub(p1+1,p2-1) ;
+      p1 = p2 ;
+    end
+  end
+  if (p1 == p2) and (p2 ~= #str) then
+    n = n + 1 ;
+    t[n] = str:sub(p1+1,-1) ;
+  end
+  return n ;
+end
+
 -- returns deep copy of table object
 function copyTable( t, copied )
   if (t == nil) then
@@ -103,8 +124,8 @@ end
 
 local OQ_MAJOR                 = 1 ;
 local OQ_MINOR                 = 6 ;
-local OQ_REVISION              = 5 ;
-local OQ_BUILD                 = 165 ;
+local OQ_REVISION              = 6 ;
+local OQ_BUILD                 = 166 ;
 local OQ_SPECIAL_TAG           = "" ;
 local OQUEUE_VERSION           = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) ..".".. OQ_REVISION ;
 local OQUEUE_VERSION_SHORT     = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) .."".. OQ_REVISION ;
@@ -1414,11 +1435,9 @@ function oq.user_timer( opts )
   if (opts == nil) then
     return ;
   end
-  local v ;
   local args = tbl.new() ;
-  for v in string.gmatch(opts, "([^ ]+)") do
-    table.insert(args, v);
-  end
+  tbl.fill_match( args, opts, " " ) ;
+
   if (args[1] == "h") then
     oq.utimer_start( "horde timer", "horde", 17, 4*60 ) ;
   elseif (args[1] == "a") then
@@ -1438,6 +1457,8 @@ function oq.user_timer( opts )
   elseif (args[1] ~= nil) then
     oq.utimer_set( "test timer", 1*60 ) ;
   end
+  
+  tbl.delete( args ) ;
 end
 
 function oq.utimer_check_bg_updates()
@@ -1947,13 +1968,14 @@ function oq.force_time_reset()
 end
 
 function oq.utc_time( arg )
+  if (oq.__date1 == nil) then
+    oq.__date1 = date("!*t") ;
+    oq.__date2 = date("!*t", now) ;
+  end
   if (arg == nil) then
     local now = time() ;
-    if (oq.__date1 == nil) then
-      oq.__date1 = date("!*t") ;
-      oq.__date2 = date("!*t", now) ;
-    end
-    return time( oq.__date1 ) + difftime(now, time( oq.__date2 )) - (OQ_data.sk_adjust or 0) + (OQ_data.tz_adjust or 0) ;
+--    return time( oq.__date1 ) + difftime(now, time( oq.__date2 )) - (OQ_data.sk_adjust or 0) + (OQ_data.tz_adjust or 0) ;
+    return time( oq.__date1 ) + difftime(now, time( oq.__date2 )) - (OQ_data.sk_adjust or 0) ;
     --
     -- date("!*t") leaks a table after every call.  to avoid, only call once
     -- this will cause a problem for those ppl with incorrect set timezones.
@@ -1963,10 +1985,6 @@ function oq.utc_time( arg )
     --    return time(date("!*t")) + difftime(now, time(date("!*t", now) )) ;
   elseif (arg == "pure") then
     local now = time() ;
-    if (oq.__date1 == nil) then
-      oq.__date1 = date("!*t") ;
-      oq.__date2 = date("!*t", now) ;
-    end
     return time( oq.__date1 ) + difftime(now, time( oq.__date2 )) ;
   else
     return time(date("!*t")) ;
@@ -2262,7 +2280,7 @@ function oq.n_premades()
 end
 
 function oq.dump_statistics()
-  oq.req_karma("player") ;
+--  oq.req_karma("player") ;
   oq.gather_my_stats() ;
   
   print( "oQueue premade stats" ) ;
@@ -2306,11 +2324,12 @@ function oq.dump_statistics()
   print( "  my_rbg_rating    : ".. oq.get_mmr() ) ;
   print( "  my_2s_rating     : ".. oq.get_arena_rating(1) ) ;
   print( "  my_3s_rating     : ".. oq.get_arena_rating(2) ) ;
-  print( "  my_5s_rating     : ".. oq.get_arena_rating(3) ) ;
+  print( "  my_5s_rating     : ".. oq.get_arena_rating(3) ) ; 
   print( "  my_resil         : ".. oq.get_resil() ) ;
-  print( "  my_timevariance  : ".. tostring( OQ_data.sk_adjust or 0 ) .." seconds" ) ;
+  print( "  my_timevariance  : ".. oq.render_tm(OQ_data.sk_adjust or 0) ) ;
+--  print( "  my_tz_adjust     : ".. tostring(OQ_data.tz_adjust  or 0) .." seconds" ) ;
+  print( "  my_time_drift    : ".. tostring(oq.pkt_drift._mean or 0) .." seconds" ) ;
   print( "  my_next_timechk  : ".. oq.render_tm( (OQ_data.sk_next_update or 0) - oq.utc_time("pure") )) ;
-  print( "  my_tz_adjust     : ".. tostring(OQ_data.tz_adjust or 0) ) ;
   if (oq.raid.raid_token == nil) then
     print( "  my_group:  not in an OQ premade" ) ;
   else
@@ -3476,6 +3495,7 @@ function oq.calc_pkt_stats()
   oq.tab5_oq_pktrecv     :SetText( string.format( "%7.2f", oq.pkt_recv._aps ) ) ;
   oq.tab5_oq_pktprocessed:SetText( string.format( "%7.2f", oq.pkt_processed._aps ) ) ;
   oq.tab5_oq_pktsent     :SetText( string.format( "%7.2f", oq.pkt_sent._aps ) ) ;
+  oq.tab5_oq_timedrift   :SetText( oq.render_tm( oq.pkt_drift._mean ) ) ;
   if (#oq.send_q > 20) then  -- more then 1 sec of pkts in the queue
     oq.tab5_oq_send_queuesz:SetText( string.format("(|cFFFF3131%d|r)", #oq.send_q ) ) ;
   elseif (#oq.send_q > 5) then
@@ -5240,7 +5260,6 @@ function oq.realm_uncooked(realm)
   return realm ;
 end
 
---  local m, name_, realm_ = oq.crack_bn_msg( msg ) ;
 function oq.crack_bn_msg( msg )
   local  p = msg:find( ",".. OQ_FLD_TO ) ;
   if (p == nil) then
@@ -6378,7 +6397,7 @@ function oq.remove_all_premades()
   for i,v in pairs(oq.tab2_raids) do
     oq.DeleteFrame( v ) ;
     oq.tab2_raids[i] = nil ; -- erased, but not cleaned up... should be reclaimed
-  end
+  end 
   oq.reshuffle_premades() ;
 end
 
@@ -6839,8 +6858,7 @@ end
 function oq.remove_all_waitlist()
   tbl.clear( oq.waitlist ) ;
   for i,v in pairs(oq.tab7_waitlist) do
-    v:Hide() ;
-    v:SetParent(nil) ;
+    oq.DeleteFrame( v ) ;
     oq.tab7_waitlist[i] = nil ; -- erased, but not cleaned up... should be reclaimed
   end
   oq.reshuffle_waitlist() ;
@@ -6873,8 +6891,7 @@ function oq.remove_waitlist( token )
   for i,v in pairs(oq.tab7_waitlist) do
     if (v.token == token) then
       reshuffle = true ;
-      v:Hide() ;
-      v:SetParent(nil) ;
+      oq.DeleteFrame( v ) ;
       oq.tab7_waitlist[i] = nil ; -- erased, but not cleaned up... should be reclaimed
       break ;
     end
@@ -6889,7 +6906,7 @@ function oq.remove_waitlist( token )
   
   -- clean up the waitlist  
   if (oq.waitlist[ token ] ~= nil) then
-    oq.waitlist[ token ] = nil ;
+    oq.waitlist[ token ] = tbl.delete(oq.waitlist[ token ]) ;
   end
 end
 
@@ -9059,18 +9076,13 @@ function oq.on_vlist(token, id, expiration, vlist)
   end
   -- parse
   OQ_data.vlist[id] = expiration ;
-  local v ;
-  local i = 0 ;
-  tbl.clear(_vlist) ;
-  for v in string.gmatch(vlist, "([^.]+)") do
-    i = i + 1 ;
-    _vlist[i] = v ;
-  end
+  tbl.fill_match( _vlist, vlist, "." ) ;
   
   if (OQ_data.vtags == nil) then
     OQ_data.vtags = tbl.new() ;
   end
   
+  local v, i ;
   for i,v in pairs(_vlist) do
     local ndx   = oq.decode_mime64_digits(v:sub(5,5)) ;
     local nosrt = nil ;
@@ -9345,7 +9357,8 @@ end
 function oq.create_waitlist_item( parent, x, y, cx, cy, token, n_members ) 
   oq.nthings = (oq.nthings or 0) + 1 ;
   local i = 1 ;
-  local n = "WaitRegion".. oq.nthings ;
+--  local n = "WaitRegion".. oq.nthings ;
+  local n = "WaitRegion" ;
   local f = oq.panel( parent, n, x, y, cx, cy, true ) ;
   f:SetFrameLevel( parent:GetFrameLevel() + 10 ) ;
   f:SetScript("OnEnter", function(self, ...) oq.set_waitlist_tooltip( self ) ; end ) ;
@@ -9355,41 +9368,43 @@ function oq.create_waitlist_item( parent, x, y, cx, cy, token, n_members )
   f.cy = cy ;
   f.token = token ;
   local x2 = 0 ;
-  f.remove_but = oq.button( f, x2, 2,  20, cy-2, "x", function(self,button,down)  
-                                                        local tok = self:GetParent().req_token ;
-                                                        if (button == "LeftButton") then
-                                                          oq.remove_waitlist( tok ) ; 
-                                                        elseif (button == "RightButton") then  
-                                                          local req = oq.waitlist[ tok ] ;
-                                                          if (req ~= nil) then
-                                                            local dialog = StaticPopup_Show("OQ_BanUser", req.realid) ;
-                                                            if (dialog ~= nil) then
-                                                              dialog.data2 = { flag = 2, btag = req.realid, req_token = tok } ;
-                                                            end                                                            
-                                                          end
-                                                        end 
-                                                      end
-                           ) ;
-  f.remove_but:RegisterForClicks("LeftButtonUp", "RightButtonUp") ;
+  if (f.remove_but == nil) then
+    f.remove_but = oq.button( f, x2, 2,  20, cy-2, "x", function(self,button,down)  
+                                                          local tok = self:GetParent().req_token ;
+                                                          if (button == "LeftButton") then
+                                                            oq.remove_waitlist( tok ) ; 
+                                                          elseif (button == "RightButton") then  
+                                                            local req = oq.waitlist[ tok ] ;
+                                                            if (req ~= nil) then
+                                                              local dialog = StaticPopup_Show("OQ_BanUser", req.realid) ;
+                                                              if (dialog ~= nil) then
+                                                                dialog.data2 = { flag = 2, btag = req.realid, req_token = tok } ;
+                                                              end                                                            
+                                                            end
+                                                          end 
+                                                        end
+                             ) ;
+    f.remove_but:RegisterForClicks("LeftButtonUp", "RightButtonUp") ;
+  end
   x2 = x2 + 20+4 ;                                               
-  f.bgroup     = oq.texture( f, x2, (cy - 24)/2,  24, 24, nil ) ;  x2 = x2 + 30 ;
-  f.role       = oq.label  ( f, x2, 5,  20, cy, ""            ) ;  x2 = x2 + 24 ;
+  f.bgroup     = f.bgroup or oq.texture( f, x2, (cy - 24)/2,  24, 24, nil ) ;  x2 = x2 + 30 ;
+  f.role       = f.role or oq.label  ( f, x2, 5,  20, cy, ""            ) ;  x2 = x2 + 24 ;
   f.role:SetJustifyV( "middle" ) ;
-  f.toon_name  = oq.label  ( f, x2, 2, 108, cy, ""            ) ;  x2 = x2 + 108 ;
+  f.toon_name  = f.toon_name or oq.label  ( f, x2, 2, 108, cy, ""            ) ;  x2 = x2 + 108 ;
   f.toon_name:SetFont(OQ.FONT, 12, "") ;
-  f.realm      = oq.label  ( f, x2, 2, 100, cy, ""            ) ;  x2 = x2 + 100 ;
-  f.level      = oq.label  ( f, x2, 2,  40, cy, "85"          ) ;  x2 = x2 +  40 ;
-  f.ilevel     = oq.label  ( f, x2, 2,  40, cy, "395"         ) ;  x2 = x2 +  40 ;
+  f.realm      = f.realm or oq.label  ( f, x2, 2, 100, cy, ""            ) ;  x2 = x2 + 100 ;
+  f.level      = f.level or oq.label  ( f, x2, 2,  40, cy, "85"          ) ;  x2 = x2 +  40 ;
+  f.ilevel     = f.ilevel or oq.label  ( f, x2, 2,  40, cy, "395"         ) ;  x2 = x2 +  40 ;
   f.ilevel:SetTextColor( 0.9, 0.9, 0.9 ) ;
-  f.resil      = oq.label  ( f, x2, 2,  40, cy, "4100"        ) ;  x2 = x2 +  40 ;
-  f.pvppower   = oq.label  ( f, x2, 2,  40, cy, "99999"       ) ;  x2 = x2 +  50 ;
+  f.resil      = f.resil or oq.label  ( f, x2, 2,  40, cy, "4100"        ) ;  x2 = x2 +  40 ;
+  f.pvppower   = f.pvppower or oq.label  ( f, x2, 2,  40, cy, "99999"       ) ;  x2 = x2 +  50 ;
   f.pvppower:SetTextColor( 0.9, 0.9, 0.9 ) ;
-  f.mmr        = oq.label  ( f, x2, 2,  40, cy, "1500"        ) ;  x2 = x2 +  40 ;
+  f.mmr        = f.mmr or oq.label  ( f, x2, 2,  40, cy, "1500"        ) ;  x2 = x2 +  40 ;
   x2 = x2 + 10 ; -- nudge for time
   f.nMembers   = n_members ;
 
   if (n_members == 1) then
-    f.invite_but = oq.button( f, x2, 2,  75, cy-2, OQ.BUT_INVITE, 
+    f.invite_but = f.invite_but or oq.button( f, x2, 2,  75, cy-2, OQ.BUT_INVITE, 
                                                function(self, button, down) 
                                                 oq.get_battle_tag() ;
                                                 if (player_realid == nil) then
@@ -9416,7 +9431,7 @@ function oq.create_waitlist_item( parent, x, y, cx, cy, token, n_members )
                                                end ) ;
     f.invite_but:RegisterForClicks("LeftButtonUp", "RightButtonUp") ;
     x2 = x2 +  75 + 5 ;
-    f.ginvite_but = oq.button( f, x2, 2,  75, cy-2, OQ.BUT_GROUPLEAD, 
+    f.ginvite_but = f.ginvite_but or oq.button( f, x2, 2,  75, cy-2, OQ.BUT_GROUPLEAD, 
                                                function(self) 
                                                 oq.get_battle_tag() ;
                                                 if (player_realid == nil) then
@@ -9439,7 +9454,7 @@ function oq.create_waitlist_item( parent, x, y, cx, cy, token, n_members )
     --
     -- group invite button
     --
-    f.invite_but = oq.button( f, x2, 2, 75*2+2, cy-2, string.format( OQ.BUT_INVITEGROUP, n_members ), 
+    f.invite_but = f.invite_but or oq.button( f, x2, 2, 75*2+2, cy-2, string.format( OQ.BUT_INVITEGROUP, n_members ), 
                                                function(self) 
                                                 oq.get_battle_tag() ;
                                                 if (player_realid == nil) then
@@ -9459,7 +9474,7 @@ function oq.create_waitlist_item( parent, x, y, cx, cy, token, n_members )
                                                end ) ;
     x2 = x2 + 75*2 + 5 ;
   end
-  f.wait_tm = oq.label ( f, x2+10, 2,  70, cy, "00:00" ) ;  x2 = x2 +  50 ;
+  f.wait_tm = f.wait_tm or oq.label ( f, x2+10, 2,  70, cy, "00:00" ) ;  x2 = x2 +  50 ;
   f:Show() ;
   return f ;
 end
@@ -13534,19 +13549,32 @@ function oq.create_tab_setup()
   --
   x  = parent:GetWidth() - 200 ;
   x2 = parent:GetWidth() -  90 ;
-  y  = parent:GetHeight() - 42 ;
-  cy = 20 ;
+  y  = parent:GetHeight() - 37 ;
+  cy = 18 ;
   oq.label( parent, x, y, 150, cy, OQ.PPS_SENT ) ;
   oq.tab5_oq_pktsent = oq.label( parent, x2, y, 60, cy, "0", "MIDDLE", "RIGHT" ) ; 
   oq.tab5_oq_send_queuesz = oq.label( parent, x-30, y, 24, cy, "--", "MIDDLE", "RIGHT" ) ; 
+  oq.tab5_oq_pktsent:SetFont(OQ.FONT_FIXED, 10, "") ;
+  oq.tab5_oq_pktsent:SetTextColor( 1,1,1 ) ;
+
   y = y - cy ; -- moving up
  
   oq.label( parent, x, y, 150, cy, OQ.PPS_PROCESSED ) ;
   oq.tab5_oq_pktprocessed = oq.label( parent, x2, y, 60, cy, "0", "CENTER", "RIGHT" ) ; 
+  oq.tab5_oq_pktprocessed:SetFont(OQ.FONT_FIXED, 10, "") ;
+  oq.tab5_oq_pktprocessed:SetTextColor( 1,1,1 ) ;
   y = y - cy ; -- moving up
   
   oq.label( parent, x, y, 150, cy, OQ.PPS_RECVD ) ;
   oq.tab5_oq_pktrecv = oq.label( parent, x2, y, 60, cy, "0", "CENTER", "RIGHT" ) ; 
+  oq.tab5_oq_pktrecv:SetFont(OQ.FONT_FIXED, 10, "") ;
+  oq.tab5_oq_pktrecv:SetTextColor( 1,1,1 ) ;
+  y = y - cy ; -- moving up
+
+  oq.label( parent, x, y, 150, cy, OQ.TIME_DRIFT ) ;
+  oq.tab5_oq_timedrift = oq.label( parent, x2, y, 60, cy, "0", "CENTER", "RIGHT" ) ; 
+  oq.tab5_oq_timedrift:SetFont(OQ.FONT_FIXED, 10, "") ;
+  oq.tab5_oq_timedrift:SetTextColor( 1,1,1 ) ;
   y = y - cy ; -- moving up
 
 --[[  
@@ -15318,7 +15346,7 @@ function oq.check_drift( dt )
   oq.pkt_drift:push( dt, true ) ;
   if (oq.pkt_drift._mean > OQ.DRIFT_MAX) then
     local pure_now = oq.utc_time( "pure" ) ;
-    if (OQ_data._karma_last_tm == nil) or (abs(OQ_data._karma_last_tm - pure_now) > 60*60) then
+    if (OQ_data._karma_last_tm == nil) or (abs(pure_now - OQ_data._karma_last_tm) > 60*60) then
       oq.req_karma( "player" ) ;
       OQ_data._karma_last_tm = pure_now ;
     end
@@ -16793,13 +16821,8 @@ end
 
 local _score_args = tbl.new() ;
 function oq.on_scores( enc_data, sk_time, curr_oq_version, xdata, officers, xrealm_arena, sig )
-  tbl.clear(_score_args) ;
-  local i = 0 ;
-  for v in string.gmatch( enc_data, "[^.]+" ) do
-    i = i + 1 ;
-    _score_args[i] = v ;
-  end
-  
+  tbl.fill_match( _score_args, enc_data, "." ) ;
+
   sk_time = tonumber( sk_time or 0, 16 ) ;
   OQ_data._xrealm_arena = tonumber(xrealm_arena or 0) or 0 ;
   
@@ -17275,13 +17298,7 @@ function oq.decode_data( pword, data )
   s = string.gsub( s, ";", "," ) ;
    
   -- pull vars out of it
-  tbl.clear( _dvars ) ;
-  local v ;
-  local i = 0 ;
-  for v in string.gmatch( s, "([^,]+)") do
-    i = i + 1 ;
-    _dvars[i] = v ; 
-  end
+  tbl.fill_match( _dvars, s, "," ) ;
   return _dvars[1], OQ.SHORT_BGROUPS[tonumber(_dvars[2])], _dvars[3] ;
 end
 
@@ -18932,9 +18949,7 @@ function oq.on_bn_event( ... )
   _ok2relay        = 1 ; 
   
   oq.check_if_new( presenceID, toonName, realmName ) ;
-
-  oq.process_msg( name, msg ) ;
-  
+  oq.process_msg( name, msg ) ;  
   oq.post_process() ;
 end
 
@@ -19160,12 +19175,9 @@ function oq.process_msg( sender, msg )
   if (msg:find(OQ.DRUNK)) then
     return ;
   end
-  local v ;
-  local i = 0 ;
-  for v in string.gmatch(msg, "([^,]+)") do
-    i = i + 1 ;
-    _vars[i] = v ;
-  end
+
+  tbl.fill_match( _vars, msg, "," ) ;
+
   _msg = msg ;
   _core_msg, _to_name, _to_realm, _from = oq.crack_bn_msg( msg ) ;
   --
@@ -19231,6 +19243,7 @@ function oq.process_msg( sender, msg )
   -- note: hold token after sending to boss as multi-acct bnets will route the data back 
   --       and dont want to ignore it when it comes back
   oq.token_push( token ) ;
+  
   --
   -- unseen message-token.  ok to process
   --
@@ -21062,12 +21075,7 @@ function oq.nGems( target, slot )
   if (ilink == nil) then
     return 0, nil, nil, nil, nil ;
   end
-  local i = 0 ;
-  tbl.clear( __ilink_info ) ;
-  for v in string.gmatch( ilink, "[^:]+" ) do
-    i = i + 1 ;
-    __ilink_info[i] = v ;
-  end
+  tbl.fill_match( __ilink_info, ilink, ":" ) ;
   
   local item_id    = __ilink_info[2] ;
   local enchant_id = __ilink_info[3] or 0 ;
@@ -21100,6 +21108,7 @@ function oq.nGems( target, slot )
   g:SetOwner( UIParent, "ANCHOR_NONE" ) ;
   g:SetHyperlink( ibare ) ;
   g:Show() ;
+  local i = 0 ;
   local ngems = 0 ;
   for i=1,g:NumLines() do 
     local mytext=_G[ g:GetName() .."TextLeft"..i] ;
