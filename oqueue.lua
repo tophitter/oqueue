@@ -124,8 +124,8 @@ end
 
 local OQ_MAJOR                 = 1 ;
 local OQ_MINOR                 = 6 ;
-local OQ_REVISION              = 6 ;
-local OQ_BUILD                 = 166 ;
+local OQ_REVISION              = 7 ;
+local OQ_BUILD                 = 167 ;
 local OQ_SPECIAL_TAG           = "" ;
 local OQUEUE_VERSION           = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) ..".".. OQ_REVISION ;
 local OQUEUE_VERSION_SHORT     = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) .."".. OQ_REVISION ;
@@ -2327,8 +2327,7 @@ function oq.dump_statistics()
   print( "  my_5s_rating     : ".. oq.get_arena_rating(3) ) ; 
   print( "  my_resil         : ".. oq.get_resil() ) ;
   print( "  my_timevariance  : ".. oq.render_tm(OQ_data.sk_adjust or 0) ) ;
---  print( "  my_tz_adjust     : ".. tostring(OQ_data.tz_adjust  or 0) .." seconds" ) ;
-  print( "  my_time_drift    : ".. tostring(oq.pkt_drift._mean or 0) .." seconds" ) ;
+  print( "  my_time_drift    : ".. oq.render_tm(oq.pkt_drift._mean or 0) ) ;
   print( "  my_next_timechk  : ".. oq.render_tm( (OQ_data.sk_next_update or 0) - oq.utc_time("pure") )) ;
   if (oq.raid.raid_token == nil) then
     print( "  my_group:  not in an OQ premade" ) ;
@@ -5596,6 +5595,8 @@ function oq.update_bn_friend_info( friendId )
           if (friend == nil) then
             OQ_data.bn_friends[ name ] = tbl.new() ;
             friend = OQ_data.bn_friends[ name ] ;
+            
+            oq.waitlist_check( toonName, realmName ) ; -- first time thru, see if they should be invited
           end
           friend.isOnline   = true ;
           friend.toonName   = toonName ;
@@ -5607,7 +5608,7 @@ function oq.update_bn_friend_info( friendId )
           end
           if (broadcast ~= nil) and (broadcast:sub(1, #OQ_SKHEADER ) == OQ_SKHEADER) then
             friend.sk_enabled = true ;
-          end          
+          end
         end
       end
     end  
@@ -5900,25 +5901,6 @@ function oq.bn_echo_raid( msg )
   end
 end
 
-function oq.check_pending_invites()
-  if ((oq.pending_invites == nil) or _inside_bg) then
-    return ;
-  end
-  
-  for name,v in pairs(oq.pending_invites) do
-    local friend = OQ_data.bn_friends[ name ] ;
-    if (friend ~= nil) then
-      if (not friend.oq_enabled) then
-        oq.mbnotify_bn_enable( friend.toonName, friend.realm, 1 ) ; 
-      end
-      friend.oq_enabled = true ; -- they got on the invite-list, must be enabled
-      InviteUnit( name ) ;
-      oq.timer_oneshot( 2.0, oq.brief_group_members ) ;  
-      oq.pending_invites[ name ] = nil ;
-    end
-  end
-end
-
 function oq.bn_check_online()
   next_bn_check = 0 ; -- force check
   oq.bntoons() ; 
@@ -6069,10 +6051,12 @@ function oq.bn_show_pending()
     oq.pending_invites = tbl.new() ;
   else
     print( "pending ---" ) ;
+    local cnt = 0 ;
     for i,v in pairs(oq.pending_invites) do
-      print( i .." raid( ".. i ..".".. v.gid ..".".. v.slot ..") ".. v.rid ) ;
+      cnt = cnt + 1 ;
+      print( tostring(v.gid) ..".".. tostring(v.slot) ..": ".. i .." (".. tostring(v.rid) ..")" ) ;
     end
-    print( "--- total: ".. #oq.pending_invites ) ;
+    print( "--- total: ".. tostring(cnt) ) ;
   end
 
   if (oq.waitlist == nil) then
@@ -6080,10 +6064,12 @@ function oq.bn_show_pending()
     oq.waitlist = tbl.new() ;
   else  
     print( "waiting ---" ) ;
+    cnt = 0 ;
     for i,v in pairs(oq.waitlist) do
+      cnt = cnt + 1 ;
       print( "[".. i .."] [".. v.name .."-".. v.realm .."] [".. v.realid .."]" ) ;
     end
-    print( "--- total: ".. #oq.waitlist ) ;
+    print( "--- total: ".. tostring(cnt) ) ;
   end
 end
 
@@ -7639,12 +7625,58 @@ function oq.accept_group_leader( req_token, group_id )
   oq.set_group_member( group_id, 1, r.name, r.realm, r.class, r.realid ) ;
 end
 
-function oq.InviteUnit( name, realm )
+function oq.remove_temporary_bnfriend( name, realm )
+  local ntotal, nonline = BNGetNumFriends() ;
+  local cnt = 0 ;
+  local f = tbl.new() ;
+  name = strlower(name) ;
+  realm = strlower(realm) ;
+  for friendId=1,ntotal do
+    tbl.fill( f, BNGetFriendInfo( friendId ) ) ;
+    local presenceID = f[1] ;
+    local givenName  = f[2] ;
+    local btag       = f[3] ;
+    local client     = f[7] ;
+    local online     = f[8] ;
+    local noteText   = f[13] ;
+    if (noteText ~= nil) and (noteText:find( "OQ,G" ) == 1) then
+      local nToons = BNGetNumFriendToons( friendId ) ;
+      if (nToons > 0) and online then
+        for toonIndx=1,nToons do
+          tbl.fill( _toon, BNGetFriendToonInfo( friendId, toonIndx ) ) ;
+          local toonName    = strlower(_toon[2]) ;
+          local toon_client = _toon[3] ;
+          local realmName   = strlower(_toon[4]) ;
+          local toon_pid    = _toon[16] ;
+          
+          if (toonName == name) and (realmName == realm) then
+            BNRemoveFriend(presenceID) ;
+            return ;
+          end
+        end
+      end
+    end
+  end  
+  tbl.delete( f ) ;
+end
+
+function oq.InviteUnit( name, realm, req_token )
   if (realm == nil) or (realm == player_realm) then
     InviteUnit( name ) ;
   else
     InviteUnit( name .."-".. realm ) ;
   end
+  if (oq.waitlist[ req_token ] ~= nil) then
+    oq.waitlist[ req_token ]._invited = true ;
+  end
+  oq.remove_waitlist( req_token ) ;
+  
+  local key = name .."-".. realm ;
+  if (oq.pending_invites) and (oq.pending_invites[ key ]) then
+    oq.pending_invites[ key ] = tbl.delete( oq.pending_invites[ key ] ) ;
+  end
+  oq.timer( "briefing", 3.5, oq.brief_group_members, nil ) ;  -- one shot, but replaced if more members show
+  oq.timer_oneshot( 20, oq.remove_temporary_bnfriend, name, realm ) ;
   next_invite_tm = 0 ; -- able to invite another player now
 end
 
@@ -7683,7 +7715,7 @@ function oq.invite_group_leader( req_token, group_id )
   end
 
   _ninvites = _ninvites + 1 ;
-  oq.timer( "invite_to_group".. _ninvites, 1, oq.timer_invite_group, true, req_token, msg, true ) ;
+  oq.timer( "invite_to_group".. _ninvites, 5, oq.timer_invite_group, true, req_token, msg, true ) ;
 end
 
 function oq.timer_invite_group( req_token, msg, is_lead )
@@ -7691,9 +7723,10 @@ function oq.timer_invite_group( req_token, msg, is_lead )
   if (r == nil) then
     return true ; -- this will remove the timer
   end
+  local key = r.name .."-".. r.realm ;
   next_bn_check = 0 ; -- force the refresh
-  local pid, online = oq.is_bnfriend( r.realid, r.name, r.realm ) ;
-  if (pid == nil) then
+  local pid = oq.bnpresence( key ) ;
+  if (pid == 0) then
     -- not friended yet
     if (r.attempts == nil) then
       r.attempts = 1 ;
@@ -7709,55 +7742,9 @@ function oq.timer_invite_group( req_token, msg, is_lead )
 
   oq.realid_msg( r.name, r.realm, r.realid, msg ) ;
   if (not is_lead) then
-    oq.InviteUnit( r.name, r.realm ) ;
+    oq.timer_oneshot( 2.0, oq.InviteUnit, r.name, r.realm, req_token ) ;
   end
-  oq.remove_waitlist( req_token ) ;
-  return true ; -- this will remove the timer
-end
-
-function oq.is_in_group( name, realm )
-  local n = name ;
-  if (realm ~= player_realm) then
-    n = n .."-".. realm ;
-  end
-  return UnitInParty( n ) ;
-end
-
-function oq.timer_invite_group_member( name, realm, rid_, msg, group_id, slot_, req_token_ )
-  if (oq.is_in_group( name, realm )) then
-    oq.pending_invites[ name .."-".. realm ] = nil ;
-    return ;
-  end
-  next_bn_check = 0 ; -- force the refresh
-  local pid = oq.bnpresence( name .."-".. realm ) ;
-  if (pid == 0) then
-    -- not friended yet
-    local r = oq.pending_invites[ name .."-".. realm ] ;
-    if (r == nil) then
-      -- table leak when deleted
-      oq.pending_invites[ name .."-".. realm ] = { raid_tok = oq.raid.raid_token, gid = group_id, slot = slot_, rid = rid_, req_token = req_token_ } ;
-      r = oq.pending_invites[ name .."-".. realm ] ;
-    end
-    if (r.attempts == nil) then
-      r.attempts = 1 ;
-    else
-      r.attempts = r.attempts + 1 ;
-    end
-    if (r.attempts == 5) then
-      oq.bn_realfriend_invite( name, realm, rid_, "#tok:".. req_token_ ..",#grp:".. group_id ..",#nam:".. player_name .."-".. tostring(oq.realm_cooked(player_realm)) ) ; 
-    elseif (r.attempts > 8) then
-      print( "B.net has not friended ".. name .."-".. realm .." (".. tostring(rid_) ..").  Giving up." ) ;
-      oq.pending_invites[ name .."-".. realm ] = nil ;
-      return true ; -- this will remove the timer
-    end
-    return ;
-  end
-  
-  oq.realid_msg( name, realm, rid_, msg ) ;
-  oq.timer_oneshot( 1.0, oq.InviteUnit, name, realm ) ;
-  oq.timer_oneshot( 3.5, oq.brief_group_members ) ;  
-  oq.pending_invites[ name .."-".. realm ] = nil ;
-  return true ; -- this will remove the timer
+  return nil ; -- keep going until in-group
 end
 
 function oq.find_first_available_slot( p ) 
@@ -7816,18 +7803,15 @@ function oq.group_invite_slot( req_token, group_id, slot )
   -- slot will NOT be 1
   --
   local r = oq.waitlist[ req_token ] ;
-  
-  if (r == nil) then
-    oq.remove_waitlist( req_token ) ;
-    return ;    
-  end
-  if (r.realid == nil) then
+  if (r == nil) or (r.realid == nil) then
     oq.remove_waitlist( req_token ) ;
     return ;    
   end
   
   group_id = tonumber( group_id ) ;
   slot     = tonumber( slot ) ;
+  
+  r._expires = oq.utc_time() + 10 ; -- invite expires in 10 seconds
   
   if ((oq.raid.type ~= OQ.TYPE_RBG) and (oq.raid.type ~= OQ.TYPE_RAID) and (group_id ~= my_group)) then
     -- proxy_invite needed
@@ -7856,20 +7840,27 @@ function oq.group_invite_slot( req_token, group_id, slot )
               oq.raid.raid_token ..","..
               oq.encode_note( oq.raid.notes ) ;
 
+  r._2binvited = true ;
   -- if i'm already b-net friends or the player is on my realm, just send msg
---  local pid = oq.bnpresence( r.name .."-".. r.realm ) ;
-  local pid, online = oq.is_bnfriend( r.realid, r.name, r.realm ) ;
-  if ((pid ~= nil) and (pid ~= 0)) or (player_realm == r.realm) then
+  local key = tostring(r.name) .."-".. tostring(r.realm) ;
+  if (oq.pending_invites == nil) then
+    oq.pending_invites = tbl.new() ;
+  end
+  oq.pending_invites[ key ] = tbl.new() ;
+  oq.pending_invites[ key ].raid_tok  = oq.raid.raid_token ;
+  oq.pending_invites[ key ].gid       = group_id ;
+  oq.pending_invites[ key ].slot      = slot ;
+  oq.pending_invites[ key ].rid       = r.realid ;
+  oq.pending_invites[ key ].req_token = req_token  ;
+  local pid = oq.bnpresence( key ) ;
+  if (pid ~= 0) then
     oq.realid_msg( r.name, r.realm, r.realid, msg ) ;
-    oq.InviteUnit( r.name, r.realm ) ;
-    oq.remove_waitlist( req_token ) ;
+    oq.timer_oneshot( 1.0, oq.InviteUnit, r.name, r.realm, req_token ) ;
     return ;
   end
+
   -- if reaches here, player is not b-net friend or not on realm... must b-net friend then invite
   oq.bn_realfriend_invite( r.name, r.realm, r.realid, "#tok:".. req_token ..",#grp:".. my_group ..",#nam:".. player_name .."-".. tostring(oq.realm_cooked(player_realm)) ) ; 
-
-  _ninvites = _ninvites + 1 ;
-  oq.timer( "invite_to_group".. _ninvites, 2, oq.timer_invite_group, true, req_token, msg ) ;
 end
 
 function oq.group_invite_first_slot_in( req_token, group_id ) 
@@ -7904,7 +7895,7 @@ function oq.group_invite_first_available( req_token )
     print( "[oq.group_invite_first_available]  no slots available" ) ;
     return ;
   end
-  if (slot == 1) then
+  if (slot == 1) and (oq.raid.type == OQ.TYPE_BG) then
     oq.invite_group_leader( req_token, group_id ) ;
   else
     oq.group_invite_slot( req_token, group_id, slot ) ;
@@ -8157,6 +8148,18 @@ function oq.btag_link2( desc, name, realm, btag )
               ":".. oq.utc_time() ..
               "|h".. 
               tostring(name) .."-".. tostring(realm) ..
+              " |cFF808080"..
+              desc ..
+              "|r |h" ;
+  return str ;
+end
+
+function oq.btag_link3( desc, name_realm, btag )
+  local str = "|Hbtag:".. 
+              tostring(strlower(btag)) ..
+              ":".. oq.utc_time() ..
+              "|h".. 
+              tostring(name_realm) ..
               " |cFF808080"..
               desc ..
               "|r |h" ;
@@ -9429,6 +9432,7 @@ function oq.create_waitlist_item( parent, x, y, cx, cy, token, n_members )
                                                    end
                                                 end
                                                end ) ;
+    f.invite_but:Show() ;
     f.invite_but:RegisterForClicks("LeftButtonUp", "RightButtonUp") ;
     x2 = x2 +  75 + 5 ;
     f.ginvite_but = f.ginvite_but or oq.button( f, x2, 2,  75, cy-2, OQ.BUT_GROUPLEAD, 
@@ -9449,12 +9453,15 @@ function oq.create_waitlist_item( parent, x, y, cx, cy, token, n_members )
                                                   end
                                                 end
                                                end ) ;
+    f.ginvite_but:Show() ;
     x2 = x2 +  75 ;
+    
+    if (f.invite_group_but) then f.invite_group_but:Hide() ; end
   else
     --
     -- group invite button
     --
-    f.invite_but = f.invite_but or oq.button( f, x2, 2, 75*2+2, cy-2, string.format( OQ.BUT_INVITEGROUP, n_members ), 
+    f.invite_group_but = f.invite_group_but or oq.button( f, x2, 2, 75*2+2, cy-2, string.format( OQ.BUT_INVITEGROUP, n_members ), 
                                                function(self) 
                                                 oq.get_battle_tag() ;
                                                 if (player_realid == nil) then
@@ -9472,6 +9479,10 @@ function oq.create_waitlist_item( parent, x, y, cx, cy, token, n_members )
                                                   end
                                                 end
                                                end ) ;
+    f.invite_group_but:Show() ;
+    
+    if (f.invite_but ) then f.invite_but :Hide() ; end
+    if (f.ginvite_but) then f.ginvite_but:Hide() ; end
     x2 = x2 + 75*2 + 5 ;
   end
   f.wait_tm = f.wait_tm or oq.label ( f, x2+10, 2,  70, cy, "00:00" ) ;  x2 = x2 +  50 ;
@@ -14169,34 +14180,34 @@ function oq.on_proxy_invite( group_id, slot_, enc_data_, req_token_ )
               req_token_ ;
               
   -- this is the target name, realm, and real-id
-  local  name, realm, rid_ = oq.decode_data( "abc123", enc_data_ ) ;
+  local  name, realm, rid_, realmid_ = oq.decode_data( "abc123", enc_data_ ) ;
   if (realm == player_realm) then
     -- on my realm, let player know he's in my group then invite him
     oq.realid_msg( name, realm, rid_, msg ) ;
-    oq.timer_oneshot( 1.0, oq.InviteUnit, name, realm ) ;
-    oq.timer_oneshot( 2.5, oq.brief_group_members ) ;  
+    oq.timer_oneshot( 1.0, oq.InviteUnit, name, realm, req_token_ ) ;
     return ;
   end
   
-  local n = name .."-".. realm ;
+  local key = name .."-".. realm ;
   if (oq.pending_invites == nil) then
     oq.pending_invites = tbl.new() ;
   end
-  oq.pending_invites[ n ] = { raid_tok = oq.raid.raid_token, gid = my_group, slot = slot_, rid = rid_, req_token = req_token_ } ;
+  oq.pending_invites[ key ] = tbl.new() ;
+  oq.pending_invites[ key ].raid_tok  = oq.raid.raid_token ;
+  oq.pending_invites[ key ].gid       = group_id ;
+  oq.pending_invites[ key ].slot      = slot_ ;
+  oq.pending_invites[ key ].rid       = rid_ ;
+  oq.pending_invites[ key ].req_token = req_token_  ;
   
-  local pid = oq.bnpresence( name .."-".. realm ) ;
+  local pid = oq.bnpresence( key ) ;
   if (pid ~= 0) then
     oq.realid_msg( name, realm, rid_, msg ) ;
-    oq.timer_oneshot( 1.0, oq.InviteUnit, name, realm ) ;
-    oq.timer_oneshot( 2.5, oq.brief_group_members ) ;  
+    oq.timer_oneshot( 1.0, oq.InviteUnit, name, realm, req_token_ ) ;
     return ;
   end
   
   -- if reaches here, player is not b-net friend or not on realm... must b-net friend then invite
   oq.bn_realfriend_invite( name, realm, rid_, "#tok:".. req_token_ ..",#grp:".. my_group ..",#nam:".. player_name .."-".. tostring(oq.realm_cooked(player_realm)) ) ; 
-
-  _ninvites = _ninvites + 1 ;
-  oq.timer( "invite_to_group".. _ninvites, 2, oq.timer_invite_group_member, true, name, realm, rid_, msg, my_group, slot_, req_token_ ) ;  
 end
 
 --
@@ -14210,7 +14221,7 @@ function oq.on_proxy_target( group_id, slot, enc_data, raid_token, req_token )
     return ;
   end
 
-  local  gl_name, gl_realm, gl_rid = oq.decode_data( "abc123", enc_data ) ;
+  local  gl_name, gl_realm, gl_rid, gl_realmid_ = oq.decode_data( "abc123", enc_data ) ;
   my_group = group_id ;
   my_slot  = slot ;
   oq.ui_player() ;
@@ -14300,7 +14311,7 @@ function oq.bn_realfriend_invite( name, realm, rid, extra_note )
   end
   
   oq.bntoons() ;
-  local friend = OQ_data.bn_friends[ name .."-".. realm ] ;
+  local friend = OQ_data.bn_friends[ tostring(name) .."-".. tostring(realm) ] ;
   if (friend ~= nil) and friend.isOnline and friend.oq_enabled then
     -- won't try to add if friended at all.  oq enabled or not
     return ;
@@ -14321,7 +14332,7 @@ end
 
 function oq.set_note_if_null( name, realm, note )
   oq.bntoons() ;
-  local friend = OQ_data.bn_friends[ name .."-".. realm ] ;
+  local friend = OQ_data.bn_friends[ tostring(name) .."-".. tostring(realm) ] ;
   if (friend == nil) or (not friend.isOnline) then
     return ;
   end
@@ -14540,7 +14551,7 @@ function oq.on_invite_accepted( raid_token, group_id, slot, class, enc_data, req
   group_id = tonumber( group_id ) ;
   slot     = tonumber( slot ) ;
 
-  local  name, realm, rid = oq.decode_data( "abc123", enc_data ) ;
+  local  name, realm, rid, realmid_ = oq.decode_data( "abc123", enc_data ) ;
   oq.set_group_member( group_id, slot, name, realm, class, rid ) ;
 
   if (slot == 1) then
@@ -14597,7 +14608,7 @@ function oq.on_invite_group_lead( req_token, group_id, raid_name, raid_leader_cl
   if (not oq.is_my_token( req_token )) then
     return ;
   end
-  local  raid_leader, raid_leader_realm, raid_leader_rid = oq.decode_data( "abc123", enc_data ) ;
+  local  raid_leader, raid_leader_realm, raid_leader_rid, realmid_ = oq.decode_data( "abc123", enc_data ) ;
   _received = true ;
   group_id = tonumber(group_id) ;
   raid_name  = oq.decode_name( raid_name ) ;
@@ -14704,7 +14715,7 @@ function oq.on_raid_join( raid_name, premade_type, raid_leader_class, enc_data, 
     return ;
   end
   
-  local  raid_leader, raid_leader_realm, raid_leader_rid = oq.decode_data( "abc123", enc_data ) ;
+  local  raid_leader, raid_leader_realm, raid_leader_rid, realmid_ = oq.decode_data( "abc123", enc_data ) ;
   _received = true ;
 
   raid_name  = oq.decode_name( raid_name ) ;
@@ -14738,7 +14749,7 @@ function oq.on_party_join( group_id, raid_name, raid_leader_class, enc_data, rai
     return ;
   end
   
-  local  raid_leader, raid_leader_realm, raid_leader_rid = oq.decode_data( "abc123", enc_data ) ;
+  local  raid_leader, raid_leader_realm, raid_leader_rid, realmid_ = oq.decode_data( "abc123", enc_data ) ;
   _received = true ;
 
   raid_name  = oq.decode_name( raid_name ) ;
@@ -14988,7 +14999,7 @@ function oq.on_invite_group( req_token, group_id, slot, raid_name, raid_leader_c
   if (not oq.is_my_token( req_token )) then
     return ;
   end
-  local  raid_leader, raid_leader_realm, raid_leader_rid = oq.decode_data( "abc123", enc_data ) ;
+  local  raid_leader, raid_leader_realm, raid_leader_rid, realmid_ = oq.decode_data( "abc123", enc_data ) ;
   _received = true ;
   _ok2relay = nil ;
 
@@ -15364,12 +15375,11 @@ function oq.process_premade_info( raid_tok, raid_name, faction, level_range, ile
   local battlegrounds = oq.decode_bg( bgs_ ) ;
   raid_name = oq.ltrim( oq.decode_name( raid_name ) ) ;
   -- decode data
-  local lead_name, lead_realm, lead_rid = oq.decode_data( "abc123", enc_data ) ;
+  local lead_name, lead_realm, lead_rid, realmid_ = oq.decode_data( "abc123", enc_data ) ;
   if (lead_name == nil) or (lead_realm == nil) or (lead_rid == nil) then
     return ;
   end
   local dt = abs(now - tm_) ;
-  oq.check_drift(dt) ;
   if (dt >= OQ_PREMADE_STAT_LIFETIME) then
     -- premade leader's time is off.  ignore
     _ok2relay = nil ;
@@ -15693,7 +15703,7 @@ function oq.on_req_invite( raid_token, raid_type, n_members_, req_token, enc_dat
   if (raid_token ~= oq.raid.raid_token) then
     return ;
   end
-  local  name_, realm_, realid_ = oq.decode_data( "abc123", enc_data ) ;
+  local  name_, realm_, realid_, realmid_ = oq.decode_data( "abc123", enc_data ) ;
   pword      = oq.decode_pword( pword ) ;
   n_members_ = tonumber( n_members_ ) ;
   local m = tbl.new() ;
@@ -15743,6 +15753,7 @@ function oq.on_req_invite( raid_token, raid_type, n_members_, req_token, enc_dat
   oq.waitlist[ req_token ] = m ;
   oq.waitlist[ req_token ].name      = name_ ;
   oq.waitlist[ req_token ].realm     = realm_ ;
+  oq.waitlist[ req_token ].realmid   = realmid_ ;
   oq.waitlist[ req_token ].realid    = realid_ ;
   oq.waitlist[ req_token ].n_members = n_members_ ;
   oq.waitlist[ req_token ].bgroup    = oq.find_bgroup( realm_ ) ;
@@ -15761,6 +15772,28 @@ function oq.on_req_invite( raid_token, raid_type, n_members_, req_token, enc_dat
   
   -- play sound to alert raid leader
   PlaySound( "AuctionWindowOpen" ) ;
+end
+
+function oq.waitlist_check( name, realm ) 
+  if (oq.waitlist == nil) or (name == nil) or (realm == nil) then
+    return ;
+  end
+  local req_token, v ;
+  for req_token,v in pairs(oq.waitlist) do
+    if ((v.name == name) and (v._2binvited == true)) then
+      oq.InviteUnit( name, realm, req_token ) ;
+      return ;
+    end
+  end
+  local key = name .."-".. realm ;
+  if (oq.pending_invites) then
+    for id,v in pairs(oq.pending_invites) do
+      if (id == key) then
+        oq.InviteUnit( name, realm, v.req_token ) ;
+        return ;
+      end
+    end
+  end
 end
 
 function oq.get_spec_icon_text( spec_id )
@@ -16832,7 +16865,10 @@ function oq.on_scores( enc_data, sk_time, curr_oq_version, xdata, officers, xrea
     _ok2relay = nil ;  -- do not relay 
     return ;
   end
-  if (abs(sk_time - now) > 30) then
+  
+  local dt = abs(now - sk_time) ;
+  oq.check_drift(dt) ;
+  if (dt > 30) then
     _ok2relay = nil ;  -- do not relay 
     oq.debug_report( OQ_LILSKULL_ICON .." now: ".. tostring(now) .."  tm_diff: ".. tostring(abs(sk_time-now)) .." sender:".. tostring(oq._sender) .." score: ".. _msg:sub(1,30) ) ;
     return ;
@@ -17134,6 +17170,12 @@ function oq.on_stats( name, realm, stats, btag )
 
   oq.update_tab1_stats() ;
   
+  local key = string.gsub( strlower(name .."-".. realm), ' ', '' ) ;
+  if (OQ_data._members[key] == nil) or (OQ_data._members[key] == "x") then
+    OQ_data._members[key] = btag ;
+    oq.log( nil, oq.btag_link( "member", name, realm, btag ) ) ;
+  end
+  
 --  if (force_grp_stats) then
 --    oq.lead_send_party_stats() ;
 --  end  
@@ -17299,7 +17341,7 @@ function oq.decode_data( pword, data )
    
   -- pull vars out of it
   tbl.fill_match( _dvars, s, "," ) ;
-  return _dvars[1], OQ.SHORT_BGROUPS[tonumber(_dvars[2])], _dvars[3] ;
+  return _dvars[1], OQ.SHORT_BGROUPS[tonumber(_dvars[2])], _dvars[3], tonumber(_dvars[2]) ;
 end
 
 function oq.encode_pword( pword )
@@ -18326,7 +18368,7 @@ function oq.on_member_left( name, realm, btag )
     return ; -- don't report if no btag
   end
   realm = oq.realm_uncooked(realm) ;
-  oq.log( nil, oq.btag_link2( "left", name, realm, btag )) ;
+--  oq.log( nil, oq.btag_link2( "left", name, realm, btag )) ;
 end
 
 function oq.set_name( gid, slot, name, realm, class, is_online )
@@ -19950,16 +19992,24 @@ function oq.assign_raid_seats()
   local seat_change = 0 ;
   local i, j ;
   local grp = tbl.new() ;
+  local _left = tbl.new() ;
   my_group = 1 ;
   my_slot  = 1 ;
   for i=1,8 do
     grp[i] = 0 ;
+    for j=1,5 do
+      local t = oq.raid.group[i].member[j] ;
+      if (t.name) and (t.name ~= "-") and (t.realm) and (t.realm ~= "-") then
+        local key = strlower(t.name .."-".. t.realm) ;
+        key = string.gsub( key, ' ', '' ) ;
+        _left[ key ] = t.realid ;
+      end
+    end
   end
   
   for i=1,n do
-    local name, _, gid = GetRaidRosterInfo(i) ;
-    local realm ;
-    name, realm = oq.crack_name( name ) ;
+    local name_, _, gid = GetRaidRosterInfo(i) ;
+    local name, realm = oq.crack_name( name_ ) ;
 
     grp[ gid ] = grp[ gid ] + 1 ;
     slot = grp[ gid ] ;
@@ -19983,6 +20033,14 @@ function oq.assign_raid_seats()
         oq.raid.group[gid].member[ slot ].realm = realm ;
         oq.raid.group[gid].member[ slot ].realm_id = oq.realm_cooked(realm) ;
         oq.set_textures( gid, slot ) ; -- new seat
+      end
+      
+      local key = strlower((name or "") .."-".. (realm or "")) ;
+      if (_left[key]) then
+        _left[key] = nil ; -- still here, clear it out
+      end
+      if (OQ_data._members[key] == nil) then
+        OQ_data._members[key] = "x" ;
       end
     end
   end
@@ -20038,8 +20096,15 @@ function oq.assign_raid_seats()
     local msg = "OQ,".. OQ_VER ..",".. msg_tok ..",".. oq.raid.raid_token ..",".. names ;
     oq.SendAddonMessage( "OQ", msg, "RAID" ) ;
   end
+  -- log who left 
+  for key,btag in pairs(_left) do
+    oq.log( nil, oq.btag_link3( "left", key, btag )) ;
+    OQ_data._members[key] = nil ;
+  end
+  
   -- cleanup (how to actually delete/free-up the memory??)
   tbl.delete( grp ) ;
+  tbl.delete( _left ) ;
 end
 
 function oq.on_party_members_changed()
@@ -22112,6 +22177,25 @@ function oq.attempt_group_recovery()
   player_karma = OQ_data._karma or 0 ;
   oq.set_karma_shield( player_karma ) ;
   oq.timer_oneshot( 4, oq.req_karma_if_needed ) ;
+  
+  if (OQ_data._members == nil) then
+    OQ_data._members = {} ;
+  end
+  if (OQ_data._members["gid"] ~= oq.raid.raid_token) then
+    tbl.clear( OQ_data._members ) ;
+  end
+  if (oq.raid.raid_token) then
+    OQ_data._members["gid"] = oq.raid.raid_token ;
+    for i=1,8 do
+      for j=1,5 do
+        local m = oq.raid.group[i].member[j] ;
+        if (m.name) and (m.name ~= "-") and (m.realm) and (m.realm ~= "-") then
+          local key = string.gsub( strlower(m.name .."-".. m.realm), ' ', '' ) ;
+          OQ_data._members[key] = m.realid ;
+        end
+      end
+    end
+  end
 end
 
 function oq.closeInvitePopup()

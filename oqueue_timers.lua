@@ -46,7 +46,9 @@ function oq.timer( id, dt_, func_, repeater, arg1_, arg2_, arg3_, arg4_, arg5_, 
   if (func_ == nil) then
     oq.timers[ id ] = tbl.delete( oq.timers[ id ] ) ;
   else
-    oq.timers[ id ] = tbl.new() ;
+    if (oq.timers[ id ] == nil) then
+      oq.timers[ id ] = tbl.new() ;
+    end
     oq.timers[ id ].dt       = dt_ ;
     oq.timers[ id ].tm       = GetTime() + dt_ ;
     oq.timers[ id ].one_shot = (not repeater) ;

@@ -127,5 +127,5 @@ end
 oq.pkt_sent      = PacketStatistics:new(10) ; 
 oq.pkt_recv      = PacketStatistics:new(10) ; 
 oq.pkt_processed = PacketStatistics:new(10) ; 
-oq.pkt_drift     = PacketStatistics:new(20) ; 
+oq.pkt_drift     = PacketStatistics:new( 5) ; 
 

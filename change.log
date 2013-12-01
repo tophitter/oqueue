@@ -1,5 +1,10 @@
 ﻿change.log for oQueue
 
+v1.6.7  BUGFIX: log will show the name of the person that has entered or left (space in realm name returned via GetRaidRosterInfo was removed)
+        UPD: more tweaking of auto-correcting time drift
+        UPD: rough edges on the invite process sanded down
+        add: people invited to groups will now be auto-removed if new to the leaders friends list (20 seconds after invite)
+
 v1.6.6  UPD: recycle wait list row frames
         UPD: tz_adjust removed
         UPD: removed all gmatch calls with fill_match (gmatch leaks?)
