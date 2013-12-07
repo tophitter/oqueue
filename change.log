@@ -1,5 +1,17 @@
 ﻿change.log for oQueue
 
+v1.6.8  BUGFIX: mesh nodes added on login now flagged for 'remove now' (desc tag not being held at login)
+        BUGFIX: final reminent of the timezone adjustment removed.  you can still adjust if needed, but that should be unnecessary now
+        BUGFIX: karma sent from same realm as scorekeeper will now be accepted
+        UPD: wait list tweaks for spacing
+        UPD: limited invite-all to invite a max of 10 or whatever you can fit in the group
+        UPD: trimmed wait list max to 30 (from 31)
+        UPD: when processing find-mesh requests, the scorekeeper will pull from those active in the last hour (down from 3 hours)
+        UPD: changed random to oq.random in anticipation of 5.4.2 (must use fastrandom now)
+        UPD: when the mesh is busy, will opt to avoid forwarding msgs
+        add: remove-offline button for the wait list tab
+        add: mass invite will invite in top-down order
+
 v1.6.7  BUGFIX: log will show the name of the person that has entered or left (space in realm name returned via GetRaidRosterInfo was removed)
         UPD: more tweaking of auto-correcting time drift
         UPD: rough edges on the invite process sanded down

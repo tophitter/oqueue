@@ -864,6 +864,7 @@ OQ.gbl = { ["tts#1959"         ] = "exploiting",  -- OQ exploiter
            ["cscird#1889"      ] = "exploiting",  -- OQ exploiter; gold dragon
            ["goddess#2851"     ] = "exploiting",  -- OQ exploiter; silver dragon (rbg)
            ["royal#1104"       ] = "exploiting",  -- OQ exploiter; gold dragon
-           ["oden#1613"        ] = "exploiting",  -- OQ exploiter; gold dragon
+           ["oden#1613"        ] = "exploiting",  -- OQ exploiter; silver dragon
+           ["bryan732#1470"    ] = "exploiting",  -- OQ exploiter; silver dragon (rbg)
          } ;
 end

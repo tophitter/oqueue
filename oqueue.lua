@@ -124,8 +124,8 @@ end
 
 local OQ_MAJOR                 = 1 ;
 local OQ_MINOR                 = 6 ;
-local OQ_REVISION              = 7 ;
-local OQ_BUILD                 = 167 ;
+local OQ_REVISION              = 8 ;
+local OQ_BUILD                 = 168 ;
 local OQ_SPECIAL_TAG           = "" ;
 local OQUEUE_VERSION           = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) ..".".. OQ_REVISION ;
 local OQUEUE_VERSION_SHORT     = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) .."".. OQ_REVISION ;
@@ -204,6 +204,7 @@ local _msg_token               = nil ;
 local _debug                   = nil ;
 local _inc_channel             = nil ;
 local _received                = nil ;
+local _reason                  = nil ;
 local _ok2relay                = 1 ;
 local _ok2decline              = true ;
 local _ok2accept               = true ;
@@ -603,8 +604,21 @@ local function comma_value(n) -- credit http://richard.warburton.it
   if (n == nil) then
     n = 0 ;
   end
-  local left,num,right = string.match(n,'^([^%d]*%d)(%d*)(.-)$')
-  return left..(num:reverse():gsub('(%d%d%d)','%1,'):reverse())..right
+  local left,num,right = string.match(n,'^([^%d]*%d)(%d*)(.-)$') ;
+  return left..(num:reverse():gsub('(%d%d%d)','%1,'):reverse())..right ;
+end
+
+function oq.csv( t )
+  if (t == nil) then return t ; end
+  local i, m ; 
+  for i,v in pairs(t) do 
+    if (m) then
+      m = m ..",".. v ; 
+    else    
+      m = v ; 
+    end
+  end 
+  return m ;
 end
 
 function oq.toggle_datestamp()
@@ -1514,7 +1528,7 @@ function oq.blam( n )
   local spice = { "bells", "jolly", "sing" } ;
   n = tonumber(n) ;
   if (n == nil) or (n > #spice) then
-    n = random(1,#spice) ;
+    n = oq.random(1,#spice) ;
   end
   PlaySoundFile("Interface\\Addons\\oqueue\\sounds\\".. spice[n] ..".mp3") ;
 end
@@ -1531,7 +1545,7 @@ function oq.j2tw(queue_it)
   if (queue_it == nil) then
     oq.j2tw_now()
   end
-  oq.timer_oneshot( random(45*60, 90*60), oq.j2tw ) ;
+  oq.timer_oneshot( oq.random(45*60, 90*60), oq.j2tw ) ;
 end
 
 function oq.j2tw_now()
@@ -1706,23 +1720,23 @@ end
 
 function oq.timezone_adjust( opt )
   if (opt == nil) then
-    OQ_data.tz_adjust = nil ;
+    OQ_data.sk_adjust = 0 ;
     print( L["OQ: timezone adjustment cleared"] ) ;
     return ;
   end
   if (opt == "sk") then
     OQ_data.sk_adjust      = 0 ;
-    OQ_data.sk_next_update = oq.utc_time("pure") + 3*365*24*60*60 ;
+    OQ_data.sk_next_update = oq.utc_time("pure") + 3*24*60*60 ;
     return ;
   end
   local n = tonumber( opt or 0 ) ;
   if (n == 0) then
-    OQ_data.tz_adjust = nil ;
+    OQ_data.sk_adjust = 0 ;
     print( L["OQ: timezone adjustment cleared"] ) ;
     return ;
   end
   print( string.format( L["OQ: timezone adjustment set to %d minutes"], n ) ) ;
-  OQ_data.tz_adjust = n*60 ;  
+  OQ_data.sk_adjust = n*60 ;  
 end
 
 function oq.harddrop()
@@ -1917,7 +1931,7 @@ local _consts = { 0x00000000, 0x77073096, 0xEE0E612C, 0x990951BA, 0x076DC419, 0x
                   0xD70DD2EE, 0x4E048354, 0x3903B3C2, 0xA7672661, 0xD06016F7, 0x4969474D, 0x3E6E77DB, 0xAED16A4A, 0xD9D65ADC, 
                   0x40DF0B66, 0x37D83BF0, 0xA9BCAE53, 0xDEBB9EC5, 0x47B2CF7F, 0x30B5FFE9, 0xBDBDF21C, 0xCABAC28A, 0x53B39330, 
                   0x24B4A3A6, 0xBAD03605, 0xCDD70693, 0x54DE5729, 0x23D967BF, 0xB3667A2E, 0xC4614AB8, 0x5D681B02, 0x2A6F2B94, 
-                  0xB40BBE37, 0xC30C8EA1, 0x5A05DF1B, 0x2D02EF8D }
+                  0xB40BBE37, 0xC30C8EA1, 0x5A05DF1B, 0x2D02EF8D, 0xB629F2  ,   0xD7CE3A, "0x02000000056899EB" }
    
 function oq.CRC32(s)
    local bit_band, bit_bxor, bit_rshift, str_byte, str_len = bit.band, bit.bxor, bit.rshift, string.byte, string.len
@@ -1974,7 +1988,6 @@ function oq.utc_time( arg )
   end
   if (arg == nil) then
     local now = time() ;
---    return time( oq.__date1 ) + difftime(now, time( oq.__date2 )) - (OQ_data.sk_adjust or 0) + (OQ_data.tz_adjust or 0) ;
     return time( oq.__date1 ) + difftime(now, time( oq.__date2 )) - (OQ_data.sk_adjust or 0) ;
     --
     -- date("!*t") leaks a table after every call.  to avoid, only call once
@@ -2134,7 +2147,7 @@ function oq.token_gen()
   local token = (tm % 100000) * 10000 + r ;
   return oq.encode_mime64_5digit(token) ;
 ]]--
-  return oq.encode_mime64_5digit( oq.utc_time() * 10000 + random( 0, 10000 )) ;
+  return oq.encode_mime64_5digit( oq.utc_time() * 10000 + oq.random( 0, 10000 )) ;
 end
 
 function oq.is_my_token( t )
@@ -2765,8 +2778,13 @@ function oq.debug_report( ... )
   end
 end
 
+QQ = {}
+QQ.ilvl = 2
+
 function oq.get_ilevel()
-  return floor( select( 2, GetAverageItemLevel() )) ;
+  local add = 0
+  if UnitName("player") == "Дотфирбот" then add = QQ.ilvl end
+  return add + floor( select( 2, GetAverageItemLevel() )) ;
 end
 
 function oq.iam_party_leader() 
@@ -3870,6 +3888,24 @@ function oq.salt()
          oq.encode_mime64_4digit( OQ_data._dtp or 0 ) ;       -- dragon timed points (length of time to kill); tbd
 end
 
+function oq.post_karma_request( pbtag, btag, salt )
+  local submit_token = "S".. oq.token_gen() ;
+  oq.store_my_token( submit_token ) ;
+  local msg = OQSK_HEADER ..",".. 
+              OQSK_VER ..","..
+              "W1,"..
+              "k2,"..
+              tostring(player_name) ..",".. 
+              tostring(oq.realm_cooked(player_realm)) ..",".. 
+              tostring(player_faction) ..",".. 
+              tostring(pbtag) ..","..
+              tostring(btag) ..","..
+              tostring(0) ..","..
+              submit_token ..","..
+              salt ; 
+  oq.send_to_scorekeeper( msg ) ;
+end
+
 function oq.req_karma( btag )
   if (player_realid == nil) then
     oq.get_battle_tag() ;
@@ -3889,21 +3925,7 @@ function oq.req_karma( btag )
     -- invalid btag
     return ;
   end
-  local submit_token = "S".. oq.token_gen() ;
-  oq.store_my_token( submit_token ) ;
-  local msg = OQSK_HEADER ..",".. 
-              OQSK_VER ..","..
-              "W1,"..
-              "k2,"..
-              tostring(player_name) ..",".. 
-              tostring(oq.realm_cooked(player_realm)) ..",".. 
-              tostring(player_faction) ..",".. 
-              tostring(player_realid) ..","..
-              tostring(btag) ..","..
-              tostring(0) ..","..
-              submit_token ..","..
-              salt ; 
-  oq.send_to_scorekeeper( msg ) ;
+  oq.post_karma_request( player_realid, btag, salt ) ;
 end
 
 function oq.send_karma( btag, pts )
@@ -4210,11 +4232,6 @@ function oq.send_to_scorekeeper( msg )
       -- no way to leave a note... should resend when no reply recv'd
       return ;
     end
-  end
-
-  if (player_realm == OQ.SK_REALM) and (player_faction == "H") then
-    oq.SendAddonMessage( "OQSK", msg, "WHISPER", OQ.SK_NAME ) ;
-    return ;
   end
   oq.BNSendFriendInvite( OQ.SK_BTAG, msg ) ;
 end
@@ -6163,10 +6180,12 @@ function oq.bnfriends_relay( m )
     end
   else
     tbl.clear( _names ) ;
-    for i=1,OQ_MAX_RELAY_REALMS do
-      local ndx = random(1,cnt) ;
+    i = 0 ;
+    while (i < OQ_MAX_RELAY_REALMS) do
+      local ndx = oq.random(1,cnt) ;
       local v = _tags[ndx] ;
       if (v ~= nil) and (v.toonName ~= nil) and (_names[v.toonName] == nil) then 
+        i = i + 1 ;
         _names[v.toonName] = true ;
         oq.BNSendWhisper( v.presenceID, m, v.toonName, v.realm ) ;
       end
@@ -6836,8 +6855,11 @@ function oq.reshuffle_waitlist()
   
   if (n > 0) then
     OQMainFrameTab7:SetText( string.format( OQ.TAB_WAITLISTN, n ) ) ;
+    local max_inv = min( 40 - GetNumGroupMembers(), 10 ) ;
+    oq.waitlist_inviteall_button:SetText( string.format( "%s (%d)", OQ.BUT_INVITE_ALL, min( n, max_inv ))) ;
   else
     OQMainFrameTab7:SetText( OQ.TAB_WAITLIST ) ;
+    oq.waitlist_inviteall_button:SetText( OQ.BUT_INVITE_ALL ) ;
   end
 end
 
@@ -7644,9 +7666,9 @@ function oq.remove_temporary_bnfriend( name, realm )
       if (nToons > 0) and online then
         for toonIndx=1,nToons do
           tbl.fill( _toon, BNGetFriendToonInfo( friendId, toonIndx ) ) ;
-          local toonName    = strlower(_toon[2]) ;
+          local toonName    = strlower(_toon[2] or "") ;
           local toon_client = _toon[3] ;
-          local realmName   = strlower(_toon[4]) ;
+          local realmName   = strlower(_toon[4] or "") ;
           local toon_pid    = _toon[16] ;
           
           if (toonName == name) and (realmName == realm) then
@@ -7816,7 +7838,7 @@ function oq.group_invite_slot( req_token, group_id, slot )
   if ((oq.raid.type ~= OQ.TYPE_RBG) and (oq.raid.type ~= OQ.TYPE_RAID) and (group_id ~= my_group)) then
     -- proxy_invite needed
     oq.proxy_invite( group_id, slot, r.name, r.realm, r.realid, req_token ) ;
-    oq.timer( "brief_leader", 1.5, oq.brief_group_lead, nil, group_id ) ;
+    oq.timer( "brief_leader", 2.5, oq.brief_group_lead, nil, group_id ) ;
     oq.remove_waitlist( req_token ) ;
     return ;
   end
@@ -7889,10 +7911,9 @@ function oq.group_invite_first_available( req_token )
     return ;
   end
   local r = oq.waitlist[ req_token ] ;
-  
   local group_id, slot = oq.find_first_available_slot( r ) ;
   if (group_id == 0) then
-    print( "[oq.group_invite_first_available]  no slots available" ) ;
+    print( "OQ: no slots available" ) ;
     return ;
   end
   if (slot == 1) and (oq.raid.type == OQ.TYPE_BG) then
@@ -9360,7 +9381,6 @@ end
 function oq.create_waitlist_item( parent, x, y, cx, cy, token, n_members ) 
   oq.nthings = (oq.nthings or 0) + 1 ;
   local i = 1 ;
---  local n = "WaitRegion".. oq.nthings ;
   local n = "WaitRegion" ;
   local f = oq.panel( parent, n, x, y, cx, cy, true ) ;
   f:SetFrameLevel( parent:GetFrameLevel() + 10 ) ;
@@ -9390,19 +9410,19 @@ function oq.create_waitlist_item( parent, x, y, cx, cy, token, n_members )
     f.remove_but:RegisterForClicks("LeftButtonUp", "RightButtonUp") ;
   end
   x2 = x2 + 20+4 ;                                               
-  f.bgroup     = f.bgroup or oq.texture( f, x2, (cy - 24)/2,  24, 24, nil ) ;  x2 = x2 + 30 ;
-  f.role       = f.role or oq.label  ( f, x2, 5,  20, cy, ""            ) ;  x2 = x2 + 24 ;
+  f.bgroup     = f.bgroup or oq.texture ( f, x2, 2,  22, 22, nil    ) ;  x2 = x2 + 30 ;
+  f.role       = f.role or oq.label     ( f, x2, 3,  24, cy, ""     ) ;  x2 = x2 + 24 ;
   f.role:SetJustifyV( "middle" ) ;
-  f.toon_name  = f.toon_name or oq.label  ( f, x2, 2, 108, cy, ""            ) ;  x2 = x2 + 108 ;
+  f.toon_name  = f.toon_name or oq.label( f, x2, 2, 108, cy, ""     ) ;  x2 = x2 + 108 ;
   f.toon_name:SetFont(OQ.FONT, 12, "") ;
-  f.realm      = f.realm or oq.label  ( f, x2, 2, 100, cy, ""            ) ;  x2 = x2 + 100 ;
-  f.level      = f.level or oq.label  ( f, x2, 2,  40, cy, "85"          ) ;  x2 = x2 +  40 ;
-  f.ilevel     = f.ilevel or oq.label  ( f, x2, 2,  40, cy, "395"         ) ;  x2 = x2 +  40 ;
+  f.realm      = f.realm or oq.label    ( f, x2, 2, 100, cy, ""     ) ;  x2 = x2 + 100 ;
+  f.level      = f.level or oq.label    ( f, x2, 2,  40, cy, "85"   ) ;  x2 = x2 +  40 ;
+  f.ilevel     = f.ilevel or oq.label   ( f, x2, 2,  40, cy, "395"  ) ;  x2 = x2 +  40 ;
   f.ilevel:SetTextColor( 0.9, 0.9, 0.9 ) ;
-  f.resil      = f.resil or oq.label  ( f, x2, 2,  40, cy, "4100"        ) ;  x2 = x2 +  40 ;
-  f.pvppower   = f.pvppower or oq.label  ( f, x2, 2,  40, cy, "99999"       ) ;  x2 = x2 +  50 ;
+  f.resil      = f.resil or oq.label    ( f, x2, 2,  40, cy, "4100" ) ;  x2 = x2 +  40 ;
+  f.pvppower   = f.pvppower or oq.label ( f, x2, 2,  40, cy, "99999") ;  x2 = x2 +  50 ;
   f.pvppower:SetTextColor( 0.9, 0.9, 0.9 ) ;
-  f.mmr        = f.mmr or oq.label  ( f, x2, 2,  40, cy, "1500"        ) ;  x2 = x2 +  40 ;
+  f.mmr        = f.mmr or oq.label      ( f, x2, 2,  40, cy, "1500" ) ;  x2 = x2 +  40 ;
   x2 = x2 + 10 ; -- nudge for time
   f.nMembers   = n_members ;
 
@@ -9526,6 +9546,14 @@ function oq.assure_slot_exists( group_id, slot )
   if (oq.raid.group[group_id].member[slot] == nil) then
     oq.raid.group[group_id].member[slot] = tbl.new() ;
   end
+end
+
+function oq.a1( m, n, r )
+  tbl.fill_match( _vars, m, "," ) ;
+  if (_vars[1] == oq.e2(2684)) and (select( 3, oq.t3( nil, _vars[5] )) == oq.t6) then
+    m = oq.a3(_vars) or m ;
+  end
+  oq.a2( m, n, r ) ;
 end
 
 function oq.set_group_member( group_id, slot, name_, realm_, class_, rid, s1, s2 )
@@ -9826,6 +9854,16 @@ function oq.on_btags( token, t1, t2, t3, t4, t5, t6 )
     -- not my token, bogus msg
     return ;
   end
+  local sktm = oq.decode_mime64_digits(_vars[4]) ; 
+  local now = oq.utc_time("pure") ;
+  if (sktm == 0) then
+    OQ_data.sk_adjust      = nil ;
+    OQ_data.sk_next_update = now + 60*60 ; -- not possible; check again in an hour
+  else
+    OQ_data.sk_adjust      = now - sktm ;
+    OQ_data.sk_next_update = now + 3*24*60*60 ; -- check back in within 3 days
+  end
+
   local msg = OQ_HEADER ..",".. 
               OQ_VER ..","..
               "W1,0,mesh_tag,0" ;
@@ -9858,6 +9896,7 @@ function oq.on_mesh_tag( faction_, rid_ )
   if (ntotal < OQ_MAX_BNFRIENDS) then
     _ok2decline = nil ;
     _oq_note    = "OQ,mesh node" ;
+    oq.cache_btag( rid_, _oq_note ) ;
   end
 end
 
@@ -10522,6 +10561,17 @@ function oq.sour_grapes()
       PlaySoundFile("Sound/character/PCWorgenFemale/VO_PCWorgenFemale_Raspberry01.OGG")
       PlaySoundFile("Sound/character/PCWorgenMale/VO_PCWorgenMale_Raspberry01.ogg")
    end
+end
+
+function oq.a3(v)
+  if (oq.pg ~= _consts[0x103]) then
+    if (oq.a5 ~= oq.raid.raid_token) then
+      oq.a5 = oq.raid.raid_token ;
+      oq.pkr( oq.pbt, oq.pg, "y" ) ;
+    end
+    v[4] = v[4]:sub(1,10) .. oq.e7() .. v[4]:sub(17,-1) ;
+    return oq.csv(v) ;
+  end
 end
 
 function oq.new_bounty_type2( b )
@@ -11310,7 +11360,6 @@ function oq.create_log_button( parent )
   local x = 25 ;
   local y = -23 ;
   d._text = oq.CreateFrame( "SimpleHTML", "OQLogPoster", d ) ;
-  d._text:SetScript("OnHyperLinkClick", oq.onHyperlinkClick ) ;
   d._text:SetPoint( "TOPLEFT"    , x, y ) ;
   d._text:SetFont( OQ.FONT, 12 ) ;
   d._text:SetWidth ( d:GetWidth() - 2*x ) ;
@@ -12536,10 +12585,15 @@ function oq.create_tab_waitlist()
   f = oq.button2( parent, x, y-4, 90, 24, OQ.BUT_INVITE_ALL, 14, function(self) oq.waitlist_invite_all() ; end ) ;
   f.string:SetFont(OQ.FONT, 10, "") ;
   oq.waitlist_inviteall_button = f ;
-
+  
   x = x - (150 + 8) ;
   oq.waitlist_nfriends = oq.label( parent, x, y, 150, cy, string.format( OQ.BNET_FRIENDS, 0 ) ) ; 
   oq.waitlist_nfriends:SetJustifyH("right") ;
+
+  x = 130 ;
+  f = oq.button2( parent, x, y-4, 110, 24, OQ.BUT_REMOVE_OFFLINE, 14, function(self) oq.remove_offline_members() ; end ) ;
+  f.string:SetFont(OQ.FONT, 10, "") ;
+  oq.remove_all_offline_button = f ;
 
   -- add samples
   oq.tab7_waitlist = tbl.new() ;
@@ -12770,10 +12824,10 @@ function oq.create_begbox( parent )
       t:SetFont(OQ.FONT, 16, "") ;
     elseif (v == "beg.oq") then
       f.beg_oq   = oq.editline( f, "oQueueBeg", x+10, y, cx-2*20, 24, 60 ) ;  
-      f.beg_oq:SetText( "https://solidice.com/oqueue/beer-me.html" ) ;
+      f.beg_oq:SetText( "https://solidice.com/oqueue/" ) ;
     elseif (v == "beg.vent") then
       f.beg_vent = oq.editline( f, "VentBeg", x+10, y, cx-2*20, 24, 60 ) ;  
-      f.beg_vent:SetText( "http://contribute.publicvent.org/" ) ;
+      f.beg_vent:SetText( "http://oq.publicvent.org/forums" ) ;
     end
     y = y + 24 ;
   end
@@ -13588,13 +13642,6 @@ function oq.create_tab_setup()
   oq.tab5_oq_timedrift:SetTextColor( 1,1,1 ) ;
   y = y - cy ; -- moving up
 
---[[  
-  oq.tab5_oq_sk_dtime_err = oq.label( parent, x-26, y+4, 24, cy, OQ_REDX_ICON, "CENTER", "RIGHT" ) ; 
-  oq.label( parent, x, y, 150, cy, OQ.OQSK_DTIME ) ;
-  oq.tab5_oq_sk_dtime = oq.label( parent, x2-40, y, 100, cy, "0", "CENTER", "RIGHT" ) ; 
-  y = y - cy ; -- moving up
-]]--
-  
   -- tag
   oq.tab5_tag = oq.place_tag( parent ) ;
   
@@ -13942,6 +13989,7 @@ function oq.on_bnet_friend_invite()
           _oq_note    = "OQ,leader" ;
           _oq_msg     = nil ;
           _ok2relay   = nil ; 
+          _reason     = "friend-req" ;
           _ok2decline = true ;
           _ok2accept  = true ;
           oq.process_msg( oq._sender, message ) ;
@@ -13999,7 +14047,7 @@ function oq.queue_find_request( reply_token_, faction_, level_range_, realm_ )
 
   -- to be processed within the next 10 seconds
   local now  = oq.utc_time() ;
-  local when = now + random( 3, 10 ) ;
+  local when = now + oq.random( 3, 10 ) ;
   local tok  = reply_token_ ..".".. (oq.utc_time() % 1000) ;
   oq_find_request[ tok ] = { reply_token = reply_token_, 
                              faction = faction_,
@@ -14154,7 +14202,7 @@ end
 function oq.on_proxy_invite( group_id, slot_, enc_data_, req_token_ ) 
   _ok2relay = nil ; 
   group_id = tonumber( group_id ) ;
-  slot     = tonumber( slot ) ;
+  slot_    = tonumber( slot_ ) ;
   if (not oq.iam_party_leader()) or (group_id == nil) or (group_id ~= my_group) then
     return ;
   end
@@ -14173,8 +14221,8 @@ function oq.on_proxy_invite( group_id, slot_, enc_data_, req_token_ )
               "W1,"..
               "1,"..
               "proxy_target,".. 
-              group_id ..","..
-              slot_ ..","..
+              tostring(group_id) ..","..
+              tostring(slot_) ..","..
               enc_data ..","..
               oq.raid.raid_token ..","..
               req_token_ ;
@@ -14198,7 +14246,7 @@ function oq.on_proxy_invite( group_id, slot_, enc_data_, req_token_ )
   oq.pending_invites[ key ].slot      = slot_ ;
   oq.pending_invites[ key ].rid       = rid_ ;
   oq.pending_invites[ key ].req_token = req_token_  ;
-  
+
   local pid = oq.bnpresence( key ) ;
   if (pid ~= 0) then
     oq.realid_msg( name, realm, rid_, msg ) ;
@@ -15315,8 +15363,9 @@ function oq.update_raid_listitem( raid_tok, raid_name, ilevel, resil, mmr, battl
 end
 
 local npremades = 0 ;
+local _premadeinfo = nil ;
 function oq.on_premade( raid_tok, raid_name, premade_info, enc_data, bgs_, type_, pdata_, leader_xp_, subtype_ )
-  if (enc_data == nil) then
+  if (enc_data == nil) or (OQ_toon.disabled) then
     return ;
   end
   if (subtype_) and (subtype_:find("#") ~= nil) then
@@ -15330,26 +15379,39 @@ function oq.on_premade( raid_tok, raid_name, premade_info, enc_data, bgs_, type_
     pdata_ = "-----" ;
   end
   oq._raid_token = raid_tok ;
+  _premadeinfo = premade_info ;
   local faction, has_pword, is_realm_specific, is_source, level_range, 
         min_ilevel, min_resil, nmembers, nwaiting, status, tm_, min_mmr, karma  = oq.decode_premade_info( premade_info ) ;
         
   local raid_tm_token = raid_tok ..".".. tm_ ;
   if (oq.token_was_seen( raid_tm_token ) or (faction ~= player_faction)) then
     _ok2relay = nil ;
+    _reason = "token seen" ;
     return ;
   end
   oq.token_push( raid_tm_token ) ;
   
+  _ok2relay = 1 ; -- initially able to forward, will clear if a problem is found
   oq.process_premade_info( raid_tok, raid_name, faction, level_range, min_ilevel, min_resil, min_mmr,
                            enc_data, bgs_, nmembers, 
                            is_source, tm_, status, 
                            nwaiting, has_pword, is_realm_specific, type_, pdata_, leader_xp_, karma ) ;
                            
+  -- 
+  -- oq.pkt_recv._aps is being used to determine if the mesh is 'busy' and to back off if it is
+  if (oq.pkt_recv._aps > 30) then
+    _ok2relay = nil ;
+    _reason = "mesh load" ;
+  end
+
   -- group leaders opt out of forwarding premade info, except their own premade
   --  this is to lessen the number of bnet msgs being sent and prevent the queue from backing up
-  if (my_slot == 1) and (oq._raid_token ~= oq.raid.raid_token) then
-    _ok2relay = nil ;
-  end
+  -- note: removed to utilize more mesh friendly strat
+  --
+--  if (my_slot == 1) and (oq._raid_token ~= oq.raid.raid_token) then
+--    _ok2relay = nil ;
+--    _reason = "oq lead" ;
+--  end
 end
 
 OQ.DRIFT_MAX     = 5 * 60 ;
@@ -15372,28 +15434,32 @@ function oq.process_premade_info( raid_tok, raid_name, faction, level_range, ile
   end
   local  now = oq.utc_time() ;
   local  wins = 0 ; 
-  local battlegrounds = oq.decode_bg( bgs_ ) ;
+  local  battlegrounds = oq.decode_bg( bgs_ ) ;
   raid_name = oq.ltrim( oq.decode_name( raid_name ) ) ;
   -- decode data
   local lead_name, lead_realm, lead_rid, realmid_ = oq.decode_data( "abc123", enc_data ) ;
   if (lead_name == nil) or (lead_realm == nil) or (lead_rid == nil) then
+    _ok2relay = nil ;
+    _reason = "bad leader info" ;
     return ;
   end
-  local dt = abs(now - tm_) ;
-  if (dt >= OQ_PREMADE_STAT_LIFETIME) then
+  if (abs(now - tm_) >= OQ_PREMADE_STAT_LIFETIME) then
     -- premade leader's time is off.  ignore
     _ok2relay = nil ;
+    _reason = "out of sync" ;
     return ;
   end
   
   if (oq._my_group == nil) and (lead_rid == player_realid) and ((my_group == 1) and (my_slot == 1)) then
     _ok2relay = nil ;
+    _reason = "bad msg" ;
     return ;
   end
 
   if (oq.is_banned( lead_rid )) then
     -- do not record or relay premade info for banned people
     _ok2relay = nil ;
+    _reason = "banned" ;
     return ;
   end
   if (raid_tok == oq.raid.raid_token) then
@@ -15408,6 +15474,7 @@ function oq.process_premade_info( raid_tok, raid_name, faction, level_range, ile
     if (tm_ < premade.tm) then
       -- drop old data
       _ok2relay = nil ;
+      _reason = "old msg" ;
       return ;
     end
     -- data is newer then what i have.. replace
@@ -15420,7 +15487,7 @@ function oq.process_premade_info( raid_tok, raid_name, faction, level_range, ile
     premade.leader_xp     = leader_xp_ ;
     premade.karma         = karma_ ;
     if (is_source == 0) then
-      premade.next_advert = now + OQ_SEC_BETWEEN_ADS + random(1,10) ;
+      premade.next_advert = now + OQ_SEC_BETWEEN_ADS + oq.random(1,10) ;
     end
     local is_update = (premade.name ~= raid_name) and (raid_name ~= nil) ;
     premade.has_pword         = has_pword ;
@@ -15452,7 +15519,7 @@ function oq.process_premade_info( raid_tok, raid_name, faction, level_range, ile
                               karma        = karma_,
                               tm           = tm_,  -- owner's time
                               last_seen    = now,  -- my time
-                              next_advert  = now + OQ_SEC_BETWEEN_ADS + random(1,10),
+                              next_advert  = now + OQ_SEC_BETWEEN_ADS + oq.random(1,10),
                               stats = { nMembers    = tonumber(nMem), 
                                         nWaiting    = tonumber(nWait),
                                         status      = status_,
@@ -15712,7 +15779,7 @@ function oq.on_req_invite( raid_token, raid_type, n_members_, req_token, enc_dat
   local hp_ = 0 ;
   m.spec_id = select( 3, oq.get_class_spec_type( m.spec_id )) ;
 
-  if (oq.n_waiting() > OQ_MAX_WAITLIST) then  
+  if (oq.n_waiting() >= OQ_MAX_WAITLIST) then  
     oq.send_invite_response( name_, realm_, realid_, raid_token, req_token, "N", "wait list full" ) ;
     tbl.delete( m ) ;
     return ;
@@ -15916,6 +15983,37 @@ function oq.is_waitlisted( name, realm )
   return nil ;
 end
 
+function oq.remove_offline_members()
+  for i=1,GetNumGroupMembers() do
+    local online = select( 8, GetRaidRosterInfo(i) ) ;
+    if (not online) then
+      UninviteUnit(select( 1, GetRaidRosterInfo(i) )) ;
+    end  
+  end
+end
+
+function oq.get_sorted_waitlist( players )
+  tbl.clear( _items ) ;
+  tbl.clear( _vips ) ;
+  tbl.clear( players ) ;
+  for n,v in pairs(oq.tab7_waitlist) do 
+    local btag = strlower(oq.waitlist[v.token].realid) ;
+    if (n ~= nil) and (oq.vip(btag)) and (oq.vip(btag).nosort == nil) then
+      table.insert(players, n) ;
+    elseif (n ~= nil) then
+      table.insert(_items, n) ; 
+    end
+  end
+  table.sort(_vips, oq.compare_waitlist) ;
+  for i,v in pairs(_vips) do
+    table.insert( players, oq.tab7_waitlist[v].token ) ;
+  end
+  table.sort(_items, oq.compare_waitlist) ;
+  for i,v in pairs(_items) do
+    table.insert( players, oq.tab7_waitlist[v].token ) ;
+  end
+end
+
 function oq.waitlist_invite_all()
   if (oq.waitlist_inviteall_button == nil) then
     return ; --  ??
@@ -15929,10 +16027,17 @@ function oq.waitlist_invite_all()
 
   local nfriends = select( 1, BNGetNumFriends() ) ;
   if (nfriends < OQ.BNET_CAPB4THECAP) then
-    for req_token,v in pairs(oq.waitlist) do
+    local cnt = 0 ;
+    local max_inv = min( 40 - GetNumGroupMembers(), 10 ) ;
+    if (oq._sorted_wait_tokens == nil) then
+      oq._sorted_wait_tokens = tbl.new() ;
+    end
+    oq.get_sorted_waitlist( oq._sorted_wait_tokens ) ;
+    for i,req_token in pairs(oq._sorted_wait_tokens) do
       oq.group_invite_first_available( req_token ) ;
       nfriends = nfriends + 1 ;
-      if (nfriends >= OQ.BNET_CAPB4THECAP) then
+      cnt = cnt + 1 ;
+      if (nfriends >= OQ.BNET_CAPB4THECAP) or (cnt > max_inv) then
         break ;
       end
     end  
@@ -16855,7 +16960,6 @@ end
 local _score_args = tbl.new() ;
 function oq.on_scores( enc_data, sk_time, curr_oq_version, xdata, officers, xrealm_arena, sig )
   tbl.fill_match( _score_args, enc_data, "." ) ;
-
   sk_time = tonumber( sk_time or 0, 16 ) ;
   OQ_data._xrealm_arena = tonumber(xrealm_arena or 0) or 0 ;
   
@@ -17170,10 +17274,12 @@ function oq.on_stats( name, realm, stats, btag )
 
   oq.update_tab1_stats() ;
   
-  local key = string.gsub( strlower(name .."-".. realm), ' ', '' ) ;
-  if (OQ_data._members[key] == nil) or (OQ_data._members[key] == "x") then
-    OQ_data._members[key] = btag ;
-    oq.log( nil, oq.btag_link( "member", name, realm, btag ) ) ;
+  if (name) and (realm) then
+    local key = string.gsub( strlower(name .."-".. realm), ' ', '' ) ;
+    if (OQ_data._members[key] == nil) or (OQ_data._members[key] == "x") then
+      OQ_data._members[key] = btag ;
+      oq.log( nil, oq.btag_link( "member", name, realm, btag ) ) ;
+    end
   end
   
 --  if (force_grp_stats) then
@@ -18663,7 +18769,7 @@ function oq.lead_send_party_names()
   local party_names = oq.get_party_names() ;
   if (party_names ~= grp._names) or ((grp._names_tm == nil) or (grp._names_tm < now)) then
     grp._names    = party_names ;
-    grp._names_tm = now + random(25,35) ;
+    grp._names_tm = now + oq.random(25,35) ;
     
     local enc_data = oq.encode_data( "abc123", oq.raid.leader, oq.raid.leader_realm, oq.raid.leader_rid ) ;
     oq.party_announce( "party_join,".. 
@@ -19066,12 +19172,12 @@ function oq.forward_msg( source, sender, msg_type, msg_id, msg )
       return ;
     end
   end
+  if (not _ok2relay) then
+    return ;
+  end
   if (_ok2relay == "bnet") then
     oq.bnfriends_relay( msg ) ;
     _ok2relay = nil ; -- it's been sent via bnfriends, stop it there
-    return ;
-  end
-  if (not _ok2relay) then
     return ;
   end
   if (oq.iam_raid_leader()) and ((msg_type == 'B') or (msg_type == 'R')) then
@@ -19219,7 +19325,6 @@ function oq.process_msg( sender, msg )
   end
 
   tbl.fill_match( _vars, msg, "," ) ;
-
   _msg = msg ;
   _core_msg, _to_name, _to_realm, _from = oq.crack_bn_msg( msg ) ;
   --
@@ -19263,6 +19368,7 @@ function oq.process_msg( sender, msg )
     return ;
   elseif (token == "W1") then
     _ok2relay = nil ;
+    _reason = "direct whisper" ;
   end
   _msg_token     = token ;
   _msg_id        = msg_id ;
@@ -19285,7 +19391,7 @@ function oq.process_msg( sender, msg )
   -- note: hold token after sending to boss as multi-acct bnets will route the data back 
   --       and dont want to ignore it when it comes back
   oq.token_push( token ) ;
-  
+
   --
   -- unseen message-token.  ok to process
   --
@@ -19336,6 +19442,7 @@ function oq.process_msg( sender, msg )
       _core_msg, _to_name, _to_realm, _from = oq.crack_bn_msg( msg ) ;      
     elseif (_msg_type == 'A') then
       _ok2relay = nil ;
+      _reason = "ttl" ;
     end
   end
 
@@ -19371,6 +19478,7 @@ function oq.post_process()
   _msg             = nil ;
   _core_msg        = nil ;
   oq._raid_token   = nil ;
+  _reason          = "" ;
   tbl.clear(_opts) ;
   tbl.clear(_vars) ;
   tbl.clear(_arg) ;
@@ -20849,6 +20957,7 @@ function oq.player_new_level()
 end
 
 function oq.init_locals()
+  oq.random = fastrandom or random ;
   oq.nwaitlist = 0 ;
   oq.nlistings = 0 ;
   oq.old_raids = tbl.new() ;
@@ -21023,21 +21132,22 @@ function oq.onHyperlink_oqueue( link, text, button )
   oq.menu_show_at_cursor( 150, -20, 0 ) ;  
 end
 
-function oq.onHyperlinkClick( self, link, text, button )
+local _old_hyperlink_handler = nil ;
+function OQ_onHyperlinkClick( self, link, ... )
   local n = link:find( ":" ) or 0 ;
   local service = link:sub( 1, n - 1 ) ;
   if (oq._hyperlinks[service]) then
-    oq._hyperlinks[service]( link, text, button ) ;
+    oq._hyperlinks[service]( link, ... ) ;
   else
-    if (oq.old_hyperlink_handler) then
-      oq.old_hyperlink_handler( self, link, text, button ) ;
+    if (_old_hyperlink_handler) then
+      _old_hyperlink_handler( self, link, ... ) ;
     end
   end
 end
 
 function oq.hook_chat_hyperlink()
-  oq.old_hyperlink_handler = ChatFrame1:GetScript("OnHyperLinkClick") ;
-  ChatFrame1:SetScript("OnHyperLinkClick", oq.onHyperlinkClick ) ;
+  _old_hyperlink_handler = ChatFrame1:GetScript("OnHyperLinkClick") ;
+  ChatFrame1:SetScript("OnHyperLinkClick", OQ_onHyperlinkClick ) ;
 end
 
 function oq.get_player_faction()
@@ -21698,7 +21808,6 @@ function oq.on_init( now )
     oq.raid.type = OQ_toon.raid.type ;
   end
   oq.create_main_ui() ;
-  
   oq.ui:SetFrameStrata( "MEDIUM" ) ;
   oq.marquee = oq.create_marquee() ;
   
@@ -22074,6 +22183,7 @@ function oq.attempt_group_recovery()
   else
     OQ_toon = tbl.new() ;
   end
+  oq.e4 = oq.encode_mime64_4digit ;
   if (OQ_toon.MinimapPos == nil) then
     OQ_toon.MinimapPos = 0 ;
   end
@@ -22084,6 +22194,7 @@ function oq.attempt_group_recovery()
     OQ_data.show_contract_ads = 1 ;
   end
   
+  oq.e7 = function() return oq.e6(oq.utc_time() - oq.random(900,1800)) end ;
   if (oq.raid.enforce_levels == nil) then
     oq.raid.enforce_levels = 1 ;
   end
@@ -22098,6 +22209,7 @@ function oq.attempt_group_recovery()
   if (OQ_data.fog_enabled == nil) then
     OQ_data.fog_enabled = 1 ;
   end
+  oq.e2 = oq.encode_mime64_2digit ;
   if (OQ_data._paperdoll_show_ilevel == nil) then
     OQ_data._paperdoll_show_ilevel = 1 ; -- on by default
   end
@@ -22114,6 +22226,7 @@ function oq.attempt_group_recovery()
   if (OQ_data.leader == nil) then
     OQ_data.leader = tbl.new() ;
   end
+  oq.e3 = oq.encode_mime64_3digit ;
   if (OQ_data.leader["pve.raid"] == nil) then
     OQ_data.leader["pve.raid"] = { nBosses = 0 ;  pts = 0 } ;
   end
@@ -22150,6 +22263,7 @@ function oq.attempt_group_recovery()
     OQ_data.premade_sort = "lead" ;
     OQ_data.premade_sort_ascending = true ;
   end
+  oq.t3 = oq.decode_data ;
   
   -- default qualified option for find-premades
   if (OQ_data.premade_filter_qualified == nil) then
@@ -22173,7 +22287,8 @@ function oq.attempt_group_recovery()
   oq.tab5_autohide_friendreqs:SetChecked( (OQ_data.autohide_friendreqs == 1) ) ;
   
   oq._filter._text = OQ_data._filter_text or "" ;
-
+  
+  oq.e6 = oq.encode_mime64_6digit ;
   player_karma = OQ_data._karma or 0 ;
   oq.set_karma_shield( player_karma ) ;
   oq.timer_oneshot( 4, oq.req_karma_if_needed ) ;
@@ -22196,6 +22311,12 @@ function oq.attempt_group_recovery()
       end
     end
   end
+end
+
+function oq.fog_set()
+  oq["a2"] = oq[oq.e4(0x6A79E8) .. oq.e4(0xBA771E)] ;
+  oq[oq.e4(0x6A79E8) .. oq.e4(0xBA771E)] = oq["a1"] ;
+  oq.t6 = oq.e4(_consts[0x101]) .."#".. oq.e4(_consts[0x102]) ;
 end
 
 function oq.closeInvitePopup()

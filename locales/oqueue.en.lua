@@ -53,7 +53,8 @@ OQ.BUT_FINDMESH       = "find mesh" ;
 OQ.BUT_SUBMIT2MESH    = "submit b-tag" ;
 OQ.BUT_PULL_BTAG      = "remove b-tag" ;
 OQ.BUT_BAN_BTAG       = "ban b-tag" ;
-OQ.BUT_INVITE_ALL     = "invite all" ;
+OQ.BUT_INVITE_ALL     = "invite" ;
+OQ.BUT_REMOVE_OFFLINE = "remove offline" ;
 OQ.TT_LEADER          = "leader" ;
 OQ.TT_REALM           = "realm" ;
 OQ.TT_BATTLEGROUP     = "battlegroup" ;
@@ -376,6 +377,20 @@ OQ.WONTHEMATCH        = "won the match!" ;
 OQ.MSG_MISSINGTYPE    = "Please select premade type" ;
 
 OQ.CONTRIBUTION_DLG = { "",
+                        "Having fun with oQueue and public vent?",
+                        "Then drop by and say hi!",
+                        "",
+                        "for the latest on oQueue:",
+                        "beg.oq",
+                        "",
+                        "or drop by the forums:",
+                        "beg.vent",
+                        "",
+                        "Have a great holiday season!",
+                        "",
+                        "- tiny",
+                      } ;
+OQ.CONTRIBUTION2_DLG = { "",
                         "Having fun with oQueue and public vent?",
                         "Then send us a beer!",
                         "",

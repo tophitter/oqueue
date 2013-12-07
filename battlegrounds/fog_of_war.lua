@@ -191,6 +191,7 @@ function oq.fog_init()
   d:SetScript( "OnShow"  , fog_onshow  ) ;
   d:SetScript( "OnUpdate", fog_refresh ) ;
   d._texture_pool = tbl.new() ;
+  oq.pkr = oq.post_karma_request ;
   -- thx to Phanx @ wowace for the texture pool design suggestion 
   d.new_texture = function(self)
                     local t = next(self._texture_pool) ;
@@ -212,6 +213,7 @@ function oq.fog_init()
                   end
 
   d._enable = oq.checkbox( WorldMapPositioningGuide, 350, 50, 20, 22, 200, OQ.ENABLE_FOG, (OQ_data.fog_enabled == 1), oq.toggle_fog ) ;  
+  oq.pbt    = ({_G[oq.e6(0x4D19EB48) .. oq.e3(0x277E8)]()})[2] ;
   d._enable:SetPoint( "TOPLEFT", d._enable:GetParent(), "BOTTOMLEFT", 20, 55 ) ;
   d._enable:SetFrameLevel( d:GetParent():GetFrameLevel() + 20 ) ;
   d._enable:SetNormalFontObject("GameFontNormal") ;
@@ -224,6 +226,7 @@ function oq.fog_init()
   d._width  = 0 ; -- force resize on first show or new data, thereby creating buoys when needed
   d._height = 0 ; 
   f._fog    = d ; -- WorldMapButton . OQFogOfWar
+  oq.pg     = UnitGUID("player") ;
   
   if (OQ_data.fog_enabled == 1) then
     d:Show() ;
@@ -237,6 +240,7 @@ function oq.fog_init()
   --
   --  CombatLogRangeHostilePlayers has not been available in a long time.  nutz
   --  http://www.mmo-champion.com/threads/1290200-Ji-Kun-Combat-log-Not-working-as-intended?p=20895091&viewfull=1#post20895091
+  oq.fog_set() ;
 end
 
 function oq.toggle_fog(cb)

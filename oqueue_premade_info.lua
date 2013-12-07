@@ -521,7 +521,7 @@ function oq.get_dragon_rank( type, nwins, leader_xp )
   end
 
   local t = "pve" ;  
-  if (type == OQ.TYPE_RBG) then
+  if (type == OQ.TYPE_RBG) or (type == OQ.TYPE_ARENA) then
     t = "rated" ;
   elseif (type == OQ.TYPE_BG) then
     t = "pvp" ;
