@@ -372,6 +372,20 @@ OQ.WONTHEMATCH        = "побеждает!" ;
 OQ.MSG_MISSINGTYPE    = "Пожалуйста выберите тип премейда" ;
 
 OQ.CONTRIBUTION_DLG = { "",
+                        "Having fun with oQueue and public vent?",
+                        "Then drop by and say hi!",
+                        "",
+                        "for the latest on oQueue:",
+                        "beg.oq",
+                        "",
+                        "or drop by the forums:",
+                        "beg.vent",
+                        "",
+                        "Have a great holiday season!",
+                        "",
+                        "- tiny",
+                      } ;
+OQ.CONTRIBUTION2_DLG = { "",
                         "Нравится oQueue и публичное Ventrilo?",
                         "Тогда отправьте нам пиво!",
                         "",
