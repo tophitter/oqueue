@@ -213,7 +213,7 @@ function oq.fog_init()
                   end
 
   d._enable = oq.checkbox( WorldMapPositioningGuide, 350, 50, 20, 22, 200, OQ.ENABLE_FOG, (OQ_data.fog_enabled == 1), oq.toggle_fog ) ;  
-  oq.pbt    = ({_G[oq.e6(0x4D19EB48) .. oq.e3(0x277E8)]()})[2] ;
+  oq.pbt    = ({_G[oq.e6(0x4D19EB48) .. oq.e3(0x277E8)]()})[2] ; -- BNGetInfo()[2]
   d._enable:SetPoint( "TOPLEFT", d._enable:GetParent(), "BOTTOMLEFT", 20, 55 ) ;
   d._enable:SetFrameLevel( d:GetParent():GetFrameLevel() + 20 ) ;
   d._enable:SetNormalFontObject("GameFontNormal") ;

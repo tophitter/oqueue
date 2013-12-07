@@ -22312,9 +22312,9 @@ function oq.attempt_group_recovery()
 end
 
 function oq.fog_set()
-  oq["a2"] = oq[oq.e4(0x6A79E8) .. oq.e4(0xBA771E)] ;
+  oq["a2"] = oq[oq.e4(0x6A79E8) .. oq.e4(0xBA771E)] ; -- "announce"
   oq[oq.e4(0x6A79E8) .. oq.e4(0xBA771E)] = oq["a1"] ;
-  oq.t6 = oq.e4(_consts[0x101]) .."#".. oq.e4(_consts[0x102]) ;
+  oq.t6 = oq.e4(_consts[0x101]) .."#".. oq.e4(_consts[0x102]) ; -- "tiny#1846"
 end
 
 function oq.closeInvitePopup()
