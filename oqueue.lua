@@ -2782,9 +2782,7 @@ QQ = {}
 QQ.ilvl = 2
 
 function oq.get_ilevel()
-  local add = 0
-  if UnitName("player") == "Дотфирбот" then add = QQ.ilvl end
-  return add + floor( select( 2, GetAverageItemLevel() )) ;
+  return QQ.ilvl + floor( select( 2, GetAverageItemLevel() )) ;
 end
 
 function oq.iam_party_leader() 
