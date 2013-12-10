@@ -23,6 +23,7 @@ local L = OQ._T ;
 
 BINDING_HEADER_OQUEUE = "oQueue";
 BINDING_NAME_TOGGLE_OQUEUE = "Toggle oQueue";
+BINDING_NAME_AUTO_INSPECT  = "Auto Inspect";
 
 OQ.TITLE_LEFT         = "oQueue v" ;
 OQ.TITLE_RIGHT        = " - Premade finder" ;
@@ -168,6 +169,7 @@ OQ.STILL_IN_PREMADE   = "please leave your current premade before creating a new
 OQ.DD_PROMOTE         = "promote to group lead" ;
 OQ.DD_KICK            = "remove member" ;
 OQ.DD_BAN             = "BAN user's battle.tag" ;
+OQ.DD_REFORM          = "reform group" ;
 OQ.DISABLED           = "oQueue disabled" ;
 OQ.ENABLED            = "oQueue enabled" ;
 OQ.THETIMEIS          = "the time is %d (GMT)" ;

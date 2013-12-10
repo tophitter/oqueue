@@ -1,5 +1,5 @@
 ## Title: oQueue
-## Version: 1.6.8
+## Version: 1.6.9
 ## Interface: 50400
 ## Author: Tiny of the Zerg
 ## Notes: Oath's premade finder using social mesh networking

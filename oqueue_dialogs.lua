@@ -458,6 +458,24 @@ StaticPopupDialogs["OQ_ReadyCheck"] = {
   hasEditBox = false
 }
 
+StaticPopupDialogs["OQ_ReformGroup"] = {
+  preferredIndex=STATICPOPUPS_NUMDIALOGS,
+  text = "Reform",
+  button1 = OQ.DLG_OK,
+  timeout = 0,
+  whileDead = true,
+  hideOnEscape = true,
+  OnShow = function (self, data)
+    self.editBox:SetText("") ;
+    self.editBox:SetFocus() ;
+  end,
+  OnAccept = function ( self, data, data2 )
+    self:Hide() ;
+    oq.do_reform( data, data2 ) ;
+  end,
+  hasEditBox = nil
+}
+
 StaticPopupDialogs["OQ_ReloadUI"] = {
   preferredIndex=STATICPOPUPS_NUMDIALOGS,
   text = OQ.DLG_14,

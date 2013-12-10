@@ -204,6 +204,7 @@
                <Scripts>
                    <OnClick>
                        PanelTemplates_SetTab(OQMainFrame, 1);
+                       OQ_hide_menu_popup() ;
                        OQTabPage1:Show();
                        OQTabPage2:Hide();
                        OQTabPage3:Hide();
@@ -226,6 +227,7 @@
                <Scripts>
                    <OnClick>
                        PanelTemplates_SetTab(OQMainFrame, 2);
+                       OQ_hide_menu_popup() ;
                        OQTabPage1:Hide();
                        OQTabPage2:Show();
                        OQTabPage3:Hide();
@@ -248,6 +250,7 @@
                <Scripts>
                    <OnClick>
                        PanelTemplates_SetTab(OQMainFrame, 3);
+                       OQ_hide_menu_popup() ;
                        OQTabPage1:Hide();
                        OQTabPage2:Hide();
                        OQTabPage3:Show();
@@ -271,6 +274,7 @@
                <Scripts>
                    <OnClick>
                        PanelTemplates_SetTab(OQMainFrame, 4);
+                       OQ_hide_menu_popup() ;
                        OQTabPage1:Hide();
                        OQTabPage2:Hide();
                        OQTabPage3:Hide();
@@ -294,6 +298,7 @@
                <Scripts>
                    <OnClick>
                        PanelTemplates_SetTab(OQMainFrame, 5);
+                       OQ_hide_menu_popup() ;
                        OQTabPage1:Hide();
                        OQTabPage2:Hide();
                        OQTabPage3:Hide();
@@ -316,6 +321,7 @@
                <Scripts>
                    <OnClick>
                        PanelTemplates_SetTab(OQMainFrame, 6);
+                       OQ_hide_menu_popup() ;
                        OQTabPage1:Hide();
                        OQTabPage2:Hide();
                        OQTabPage3:Hide();
@@ -338,6 +344,7 @@
                <Scripts>
                    <OnClick>
                        PanelTemplates_SetTab(OQMainFrame, 7);
+                       OQ_hide_menu_popup() ;
                        OQTabPage1:Hide();
                        OQTabPage2:Hide();
                        OQTabPage3:Hide();

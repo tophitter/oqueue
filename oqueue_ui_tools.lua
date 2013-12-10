@@ -127,7 +127,6 @@ function oq.DeleteFrame( f )
   f:Hide() ;
   f:SetParent(nil) ;
   oq.__frame_pool[strlower(f:GetName())][f] = true ;
-if (tbl._debug) then print( "frame delete: ".. tostring(strlower(f:GetName())) ) ; end 
 end
 
 function oq.CreateFrame( type, name, parent, template )
@@ -146,11 +145,9 @@ function oq.CreateFrame( type, name, parent, template )
   if (f) then
     oq.__frame_pool[key][f] = nil ;
     f:SetParent( parent ) ;
-if (tbl._debug) then print( "recycle frame: ".. tostring(key) .."" ) ; end
     -- what about name and template?
   else
     f = CreateFrame( type, name, parent, template ) ;
-if (tbl._debug) then print( "new frame: ".. tostring(type) ..".".. tostring(name) .."" ) ; end
   end
   if (parent ~= nil) then
     f:SetFrameLevel( parent:GetFrameLevel() + 1 ) ;
@@ -560,10 +557,16 @@ function oq.menu_show_core( f, width )
         break ;
       end
     end
+    oq.__menu._height = max( 10, n + 12 ) ;
+    oq.__menu._width  = width or f:GetWidth() ;
+    
     oq.__menu:SetParent( f ) ;
-    oq.__menu:SetFrameLevel( 125 ) ;
-    oq.__menu:SetWidth( width or f:GetWidth() ) ;
-    oq.__menu:SetHeight( max( 10, n + 12 )) ;
+    oq.__menu:SetFrameStrata( "HIGH" ) ;
+    oq.__menu:SetFrameLevel( 120 ) ;
+    
+    oq.__menu:SetWidth( oq.__menu._width ) ;
+    oq.__menu:SetHeight( oq.__menu._height ) ;
+    oq.__menu:Raise() ;
     PlaySound("igMainMenuOptionCheckBoxOn") ;
   end
 end
@@ -571,12 +574,19 @@ end
 function oq.menu_show( f, my_corner, adj_x, adj_y, their_corner, width )
   if (oq.__menu) then
     oq.menu_show_core( f, width ) ;
-    
     oq.__menu:SetPoint( my_corner, adj_x, adj_y, their_corner, 0, 0 ) ;
     oq.__menu:Show() ;
-    oq.__menu:SetFrameStrata("TOOLTIP") ;
-    oq.__menu:SetFrameLevel( f:GetFrameLevel() + 5 ) ;
-    oq.__menu:Raise() ;
+  end
+end
+
+function oq.menu_show_aligned( f, adj_x, adj_y, width )
+  if (oq.__menu) then
+    oq.menu_show_core( UIParent, width ) ;
+  
+    oq.__menu:SetPoint ( "TOPLEFT", UIParent, "BOTTOMLEFT", f:GetLeft(), f:GetBottom()-2 ) ;
+    oq.__menu:SetWidth ( oq.__menu._width ) ;
+    oq.__menu:SetHeight( oq.__menu._height ) ;
+    oq.__menu:Show() ;
   end
 end
 

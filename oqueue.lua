@@ -124,21 +124,21 @@ end
 
 local OQ_MAJOR                 = 1 ;
 local OQ_MINOR                 = 6 ;
-local OQ_REVISION              = 8 ;
-local OQ_BUILD                 = 168 ;
+local OQ_REVISION              = 9 ;
+local OQ_BUILD                 = 169 ;
 local OQ_SPECIAL_TAG           = "" ;
 local OQUEUE_VERSION           = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) ..".".. OQ_REVISION ;
 local OQUEUE_VERSION_SHORT     = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) .."".. OQ_REVISION ;
 local OQ_VERSION               = tostring(OQ_MAJOR) .."".. tostring(OQ_MINOR) .."".. tostring(OQ_REVISION) ;
 local OQ_VER_STR               = OQUEUE_VERSION ;
-local OQ_VER                   = "0Z"  ;  -- just removing the dot
+local OQ_VER                   = "1A"  ;  -- just removing the dot
 local OQSK_VER                 = "0C"  ;  
 local OQSK_HEADER              = "OQSK" ;
 local OQ_NOTIFICATION_CYCLE    = 2 * 60 * 60 ; -- every 2 hrs
 local OQ_VERSION_SWAP_TM       = 24 * 60 * 60 ;  -- daily check for toons that are OQ enabled
 local OQ_ONEDAY                = 24 * 60 * 60 ; 
 local OQ_REALISTIC_MAX_GAMELEN = 8*60*60 ;  -- classic AV no longer exists
-local OQ_MAX_RELAY_REALMS      = 5 ; 
+local OQ_MAX_RELAY_REALMS      = 4 ; 
 local OQ_NOEMAIL               = "." ;
 local OQ_OLDBNHEADER           = "[OQ] " ;
 local OQ_BNHEADER_TAG          = "(OQ)" ;
@@ -154,7 +154,7 @@ local OQ_PREMADE_STAT_LIFETIME = 5*60 ; -- 5 minutes
 local OQ_GROUP_TIMEOUT         = 2*60 ; -- 2 minutes (matches raid-timeout) if no response will remove group 
 local OQ_GROUP_RECOVERY_TM     = 5*60 ; -- 5 minutes 
 local OQ_SEC_BETWEEN_ADS       = 25 ; 
-local OQ_SEC_BETWEEN_PROMO     = 25 ;
+local OQ_SEC_BETWEEN_PROMO     = 40 ;
 local OQ_BOOKKEEPING_INTERVAL  = 10 ;
 local OQ_BRIEF_INTERVAL        = 30 ;
 local HAILTOTHEKINGBABY        = 3600 ; -- no more then once an hour
@@ -252,11 +252,13 @@ local _hop                     = 0 ;
 local player_away              = nil ;
 local oq_ascii                 = tbl.new() ;
 local oq_mime64                = tbl.new() ;
-local lead_ticker              = 0 ;
+local lead_ticker              =  0 ;
 local OQ_MAX_BNFRIENDS         = 85 ;
 OQ.MAXBOUNTIES                 = 20 ;
 OQ.BNET_CAPB4THECAP            = 98 ; -- blizz increased the cap from 100 to 112 (also fixed the crash.  capb4cap needed?).  
-OQ.MODEL_CHECK_TM              = 3 ; -- check every 3 seconds
+OQ.MODEL_CHECK_TM              =  3 ; -- check every 3 seconds
+OQ.RELAY_OVERLOAD              = 24 ; -- if sent msgs/sec exceeds 24, p8 msgs will stop sending
+OQ.MAX_MSGS_PER_CYCLE          =  6 ; -- cycles 4 times per second sending msgs
 local _ ; -- throw away (was getting taint warning; what happened blizz?)
 
 if (OQ_toon == nil) then 
@@ -1672,8 +1674,10 @@ function oq.show_data( opt )
     oq.show_count() ;
   elseif (opt == "report") then
     oq.show_reports() ;
-  elseif (opt == "raid") then
+  elseif (opt == "raid") or (opt == "premade") then
     oq.show_raid() ;
+  elseif (opt == "reform") then
+    oq.reform_show_keys() ;    
   elseif (opt == "stats") then
     oq.dump_statistics() ;
   elseif (opt == "timers") then
@@ -2293,7 +2297,7 @@ function oq.n_premades()
 end
 
 function oq.dump_statistics()
---  oq.req_karma("player") ;
+  oq.req_karma("player") ;
   oq.gather_my_stats() ;
   
   print( "oQueue premade stats" ) ;
@@ -2448,6 +2452,7 @@ function oq.raid_init()
   oq.raid.type = OQ.TYPE_BG ;
   oq.waitlist  = tbl.new() ;
   oq.pending   = tbl.new() ;
+  oq.names     = tbl.new() ; -- key == name-realm; value == btag; populate from waitlist
   my_group     = 0 ;
   my_slot      = 0 ;
   
@@ -2657,14 +2662,15 @@ function oq.SendAddonMessage( channel, msg, type, to_name )
   elseif (type == "PARTY") then
     SendAddonMessage( channel, msg, "PARTY", nil ) ;
     oq.pkt_sent:inc() ;
-  else
-    if (type == "INSTANCE_CHAT") then
-      SendAddonMessage( channel, msg, type, to_name ) ;
-      oq.pkt_sent:inc() ;
-    elseif (string.find(msg, ",p8,") == nil) then
-      oq.BNSendQ_push( SendAddonMessage, channel, msg, type, to_name ) ;
-      oq.pkt_sent:inc() ;
-    end
+  elseif (type == "INSTANCE_CHAT") then
+    SendAddonMessage( channel, msg, type, to_name ) ;
+    oq.pkt_sent:inc() ;
+  elseif (type == "WHISPER") and (to_name) then
+    SendAddonMessage( channel, msg, type, to_name ) ;
+    oq.pkt_sent:inc() ;
+  elseif (string.find(msg, ",p8,") == nil) then
+    oq.BNSendQ_push( SendAddonMessage, channel, msg, type, to_name ) ;
+    oq.pkt_sent:inc() ;
   end  
 end
 
@@ -3892,7 +3898,7 @@ function oq.post_karma_request( pbtag, btag, salt )
   local msg = OQSK_HEADER ..",".. 
               OQSK_VER ..","..
               "W1,"..
-              "k2,"..
+              "k3,"..
               tostring(player_name) ..",".. 
               tostring(oq.realm_cooked(player_realm)) ..",".. 
               tostring(player_faction) ..",".. 
@@ -3942,7 +3948,7 @@ function oq.send_karma( btag, pts )
   local msg = OQSK_HEADER ..",".. 
               OQSK_VER ..","..
               "W1,"..
-              "k2,"..
+              "k3,"..
               tostring(player_name) ..",".. 
               tostring(oq.realm_cooked(player_realm)) ..",".. 
               tostring(player_faction) ..",".. 
@@ -4224,7 +4230,7 @@ function oq.send_to_scorekeeper( msg )
   local pid, online = oq.is_bnfriend(OQ.SK_BTAG) ;
   if (pid ~= nil) then
     if (online) then
-      oq.BNSendWhisper( pid, msg, OQ.SK_NAME, OQ.SK_REALM ) ;
+      oq.BNSendWhisper_now( pid, msg, OQ.SK_NAME, OQ.SK_REALM ) ;
       return ;
     else
       -- no way to leave a note... should resend when no reply recv'd
@@ -5020,7 +5026,7 @@ end
 -- if real-id friend, will bnwhisper
 -- if not same realm and not friend, will bnfriendinvite with msg in note
 --
-function oq.realid_msg( to_name, to_realm, real_id, msg ) 
+function oq.realid_msg( to_name, to_realm, real_id, msg, insure ) 
   if (msg == nil) then
     return ;
   end
@@ -5050,7 +5056,11 @@ function oq.realid_msg( to_name, to_realm, real_id, msg )
   local pid, online = oq.is_bnfriend(real_id, to_name, to_realm) ;
   if (pid ~= nil) then
     if (pid > 0) then
-      oq.BNSendWhisper( pid, msg, to_name, to_realm ) ;
+      if (insure) then
+        oq.BNSendWhisper_now( pid, msg, to_name, to_realm ) ;
+      else
+        oq.BNSendWhisper( pid, msg, to_name, to_realm ) ;
+      end
       return ;
     else
       -- no way to leave a note... should resend when no reply recv'd
@@ -5146,6 +5156,20 @@ function oq.BNSendQ_pop()
   
   -- recycle pkt holder
   tbl.delete( t ) ;
+end
+
+function oq.send_queued_msgs()
+  if (oq.send_q == nil) or (#oq.send_q == 0) then
+    return ;
+  end
+  local last_pkt_this_round = oq.pkt_sent._cnt + OQ.MAX_MSGS_PER_CYCLE ; -- called four times a second, 28 msgs/sec max
+  local now = oq.utc_time() ;
+  local cnt = 0 ;
+  
+  while (#oq.send_q ~= 0) and (oq.pkt_sent._cnt < last_pkt_this_round) and (cnt < 10) do
+    oq.BNSendQ_pop() ;
+    cnt = cnt + 1 ;
+  end
 end
 
 function oq.BNSendWhisper( pid, msg, name, realm )
@@ -6128,13 +6152,13 @@ function oq.announce( msg, to_name, to_realm )
   local m = "OQ,".. OQ_VER ..",".. msg_tok ..",".. OQ_TTL ..",".. msg ;
 
   -- send to raid (which sends to local channel and real-id ppl in the raid)
-  oq.announce_relay( m ) ;
+  oq.announce_relay( m, true ) ;
 end
 
 --
 -- message relays
 --
-function oq.announce_relay( m )
+function oq.announce_relay( m, insure )
   if (OQ_toon.disabled) then
     return ;
   end
@@ -6150,13 +6174,13 @@ function oq.announce_relay( m )
 
   -- send to real-id list for ppl not in the raid (hoping they will forward to their local OQGeneral channel)
   if (_dest_realm == nil) or (_dest_realm ~= player_realm) then
-    oq.bnfriends_relay( m ) ;
+    oq.bnfriends_relay( m, insure ) ;
   end
 end
 
 local _tags   = tbl.new() ;
 local _realms = tbl.new() ;
-function oq.bnfriends_relay( m )
+function oq.bnfriends_relay( m, insure )
   oq.bntoons() ; -- just incase the information has changed 
   if (OQ_data.bn_friends == nil) then
     return ;
@@ -6174,7 +6198,11 @@ function oq.bnfriends_relay( m )
   end
   if (cnt <= OQ_MAX_RELAY_REALMS) then
     for i,v in pairs(_tags) do
-      oq.BNSendWhisper( v.presenceID, m, v.toonName, v.realm ) ;
+      if (insure) then
+        oq.BNSendWhisper_now( v.presenceID, m, v.toonName, v.realm ) ;
+      else
+        oq.BNSendWhisper( v.presenceID, m, v.toonName, v.realm ) ;
+      end
     end
   else
     tbl.clear( _names ) ;
@@ -6185,7 +6213,11 @@ function oq.bnfriends_relay( m )
       if (v ~= nil) and (v.toonName ~= nil) and (_names[v.toonName] == nil) then 
         i = i + 1 ;
         _names[v.toonName] = true ;
-        oq.BNSendWhisper( v.presenceID, m, v.toonName, v.realm ) ;
+        if (insure) then
+          oq.BNSendWhisper_now( v.presenceID, m, v.toonName, v.realm ) ;
+        else
+          oq.BNSendWhisper( v.presenceID, m, v.toonName, v.realm ) ;
+        end
       end
     end
   end
@@ -6227,7 +6259,7 @@ function oq.raid_announce_relay( m )
         if (oq.raid.group[i]) and (oq.raid.group[i].member) then
           local lead = oq.raid.group[i].member[1] ;
           if ((lead) and (lead.name) and (lead.name ~= "-") and (lead.name ~= player_name) and (lead.realm)) then
-            oq.whisper_msg( lead.name, lead.realm, m ) ;
+            oq.whisper_msg( lead.name, lead.realm, m, true ) ;
           end
         end
       end
@@ -6614,6 +6646,20 @@ function oq.create_ban_listitem( parent, x, y, cx, cy, btag, reason, ts )
   local n = "Banned".. oq.nthings ;
   local f = oq.panel( parent, n, x, y, cx, cy ) ;
   
+  f:SetScript("OnEnter", function(self, ...) self._highlight:Show() ; end ) ;
+  f:SetScript("OnLeave", function(self, ...) self._highlight:Hide() ; end ) ;
+  
+  if (f._highlight == nil) then
+    local t = f:CreateTexture( nil, "BACKGROUND" ) ;
+    t:SetDrawLayer("BACKGROUND") ;
+    t:SetTexture( "INTERFACE/QUESTFRAME/UI-QuestTitleHighlight" ) ;
+    t:SetPoint( "TOPLEFT", 5, 0, "TOPLEFT", 0, 0 ) ;
+    t:SetPoint( "BOTTOMRIGHT", -5, 0, "BOTTOMRIGHT", 0, 0 ) ;
+    t:SetAlpha( 0.6 ) ;
+    t:Hide() ;
+    f._highlight = t ;
+  end
+
   f.texture:SetTexture( 0.0, 0.0, 0.0, 1 ) ;
 
   local x2 = 0 ;
@@ -6863,6 +6909,7 @@ end
 
 function oq.remove_all_waitlist()
   tbl.clear( oq.waitlist ) ;
+  tbl.clear( oq.names ) ;
   for i,v in pairs(oq.tab7_waitlist) do
     oq.DeleteFrame( v ) ;
     oq.tab7_waitlist[i] = nil ; -- erased, but not cleaned up... should be reclaimed
@@ -6912,6 +6959,8 @@ function oq.remove_waitlist( token )
   
   -- clean up the waitlist  
   if (oq.waitlist[ token ] ~= nil) then
+    local r = oq.waitlist[ token ] ;
+    oq.names[ strlower(r.name .."-".. r.realm) ] = nil ;
     oq.waitlist[ token ] = tbl.delete(oq.waitlist[ token ]) ;
   end
 end
@@ -7601,8 +7650,10 @@ function oq.raid_cleanup()
   end
 
   tbl.clear( oq.waitlist ) ;
+  tbl.clear( oq.names ) ;
   my_group      = 0 ;
   my_slot       = 0 ;
+  oq.reform_clear() ;
 
   -- remove raid-only procs
 --  oq.set_premade_type( OQ.TYPE_BG ) ;
@@ -7680,16 +7731,20 @@ function oq.remove_temporary_bnfriend( name, realm )
   tbl.delete( f ) ;
 end
 
+function oq.waitlist_clear_token( req_token )
+  if (oq.waitlist[ req_token ] ~= nil) then
+    oq.waitlist[ req_token ]._invited = true ;
+  end
+  oq.remove_waitlist( req_token ) ;
+end
+
 function oq.InviteUnit( name, realm, req_token )
   if (realm == nil) or (realm == player_realm) then
     InviteUnit( name ) ;
   else
     InviteUnit( name .."-".. realm ) ;
   end
-  if (oq.waitlist[ req_token ] ~= nil) then
-    oq.waitlist[ req_token ]._invited = true ;
-  end
-  oq.remove_waitlist( req_token ) ;
+  oq.waitlist_clear_token( req_token ) ;
   
   local key = name .."-".. realm ;
   if (oq.pending_invites) and (oq.pending_invites[ key ]) then
@@ -7721,21 +7776,27 @@ function oq.invite_group_leader( req_token, group_id )
               oq.raid.raid_token ..","..
               oq.encode_note( oq.raid.notes ) ;
 
+  if (oq.iam_raid_leader() and (player_realm == r.realm))  then
+    _ninvites = _ninvites + 1 ;
+    oq.realid_msg( r.name, r.realm, r.realid, msg, true ) ;
+    oq.remove_waitlist( req_token ) ;
+    return ;
+  end
+
   -- if i'm already b-net friends or the player is on my realm, just send msg
   local pid = oq.bnpresence( r.name .."-".. r.realm ) ;
   if (pid ~= 0) or (player_realm == r.realm) then
-    oq.realid_msg( r.name, r.realm, r.realid, msg ) ;
+    oq.realid_msg( r.name, r.realm, r.realid, msg, true ) ;
     oq.remove_waitlist( req_token ) ;
     return ;
   end
   
   -- if reaches here, player is not b-net friend or not on realm... must b-net friend then invite
-  if (oq.iam_raid_leader() and (player_realm ~= r.realm)) then
+  if (oq.iam_raid_leader()) then
     oq.bn_realfriend_invite( r.name, r.realm, r.realid, "#tok:".. req_token ..",#lead" ) ;
+    _ninvites = _ninvites + 1 ;
+    oq.timer( "invite_to_group".. _ninvites, 5, oq.timer_invite_group, true, req_token, msg, true ) ;
   end
-
-  _ninvites = _ninvites + 1 ;
-  oq.timer( "invite_to_group".. _ninvites, 5, oq.timer_invite_group, true, req_token, msg, true ) ;
 end
 
 function oq.timer_invite_group( req_token, msg, is_lead )
@@ -7760,7 +7821,7 @@ function oq.timer_invite_group( req_token, msg, is_lead )
     return ;
   end
 
-  oq.realid_msg( r.name, r.realm, r.realid, msg ) ;
+  oq.realid_msg( r.name, r.realm, r.realid, msg, true ) ;
   if (not is_lead) then
     oq.timer_oneshot( 2.0, oq.InviteUnit, r.name, r.realm, req_token ) ;
   end
@@ -7872,9 +7933,19 @@ function oq.group_invite_slot( req_token, group_id, slot )
   oq.pending_invites[ key ].slot      = slot ;
   oq.pending_invites[ key ].rid       = r.realid ;
   oq.pending_invites[ key ].req_token = req_token  ;
+  
+  local enc_data_ = oq.encode_data( "abc123", r.name, r.realm, r.realid ) ;
+  oq.reform_keep( r.name, r.realm, enc_data_, req_token ) ;
+  
+  if (r.realm == player_realm) then
+    oq.realid_msg( r.name, r.realm, r.realid, msg, true ) ;
+    oq.timer_oneshot( 1.0, oq.InviteUnit, r.name, r.realm, req_token ) ;
+    return ;
+  end
+
   local pid = oq.bnpresence( key ) ;
   if (pid ~= 0) then
-    oq.realid_msg( r.name, r.realm, r.realid, msg ) ;
+    oq.realid_msg( r.name, r.realm, r.realid, msg, true ) ;
     oq.timer_oneshot( 1.0, oq.InviteUnit, r.name, r.realm, req_token ) ;
     return ;
   end
@@ -7969,7 +8040,7 @@ function oq.make_dropdown_03( button, req_token)
 
     end
   end
-  oq.menu_show( button, "TOPLEFT", 2, -25, "BOTTOMLEFT", button:GetWidth()+10 ) ;
+  oq.menu_show_aligned( button, 2, -25, button:GetWidth()+10 ) ;
 end
 
 function oq.first_slot_in_group( g_id )
@@ -7999,7 +8070,7 @@ function oq.make_dropdown_04( button, req_token )
                  ) ;
     end
   end
-  oq.menu_show( button, "TOPLEFT", 2, -25, "BOTTOMLEFT", button:GetWidth()+10 ) ;
+  oq.menu_show_aligned( button, 2, -25, button:GetWidth()+10 ) ;
 end
 
 --
@@ -8028,6 +8099,7 @@ function oq.on_remove( g_id, slot )
     -- removing group lead, which removes entire group
     oq.on_remove_group( g_id ) ;
   end
+  oq.raid_cleanup_slot( g_id, slot ) ;
 end
 
 function oq.on_remove_group( g_id )
@@ -8076,13 +8148,16 @@ function oq.remove_member( g_id, slot )
                     g_id ..","..
                     slot 
                   ) ;
-  if (oq.raid.type == OQ.TYPE_RBG) or (oq.raid.type == OQ.TYPE_RAID) then
+  if (oq.raid.type ~= OQ.TYPE_BG) or ((oq.raid.type == OQ.TYPE_BG) and (g_id == my_group)) then
     local m = oq.raid.group[ g_id ].member[ slot ] ;
     local n = m.name ;
     if (m.realm ~= player_realm) then
       n = n .."-".. m.realm ;
     end
     UninviteUnit( n ) ;
+  elseif (oq.raid.type == OQ.TYPE_BG) and (slot == 1) then
+    local m = oq.raid.group[ g_id ].member[ slot ] ;
+    oq.realid_msg( m.name, m.realm, m.realid, "remove,".. tostring(g_id) ..",".. tostring(slot), true ) ;
   end
   -- incase the slot if a group lead that is offline
   oq.on_remove( g_id, slot ) ;
@@ -8301,6 +8376,8 @@ function oq.on_classdot_menu_select( g_id, slot, action )
     oq.karma_vote( g_id, slot, -1 ) ;
   elseif (action == "kick") then
     oq.remove_member( g_id, slot ) ;
+  elseif (action == "reform") then
+    oq.reform_group( g_id ) ;
   elseif (type(action) == "number") then
     oq.leader_set_charm( g_id, slot, action ) ;
   end
@@ -8324,6 +8401,7 @@ local _dropdown_options = { { val = "promote", f = 0x10, msg = OQ.DD_PROMOTE },
                     { val = "upvote" , f = 0x08, msg = OQ.TT_KARMA ..":  ".. OQ.karma_up .."  ".. OQ.UP    },
                     { val = "dnvote" , f = 0x08, msg = OQ.TT_KARMA ..":  ".. OQ.karma_dn .."  ".. OQ.DOWN  },
                     { val = "spacer3", f = 0x08, msg = "---------------", notClickable = 1 },
+                    { val = "reform" , f = 0x60, msg = OQ.DD_REFORM }, -- group leader(0x20), bg group only(0x40)
                     { val = "kick"   , f = 0x20, msg = OQ.DD_KICK }, 
                     { val = "ban"    , f = 0x08, msg = OQ.DD_BAN }, 
                   } ;
@@ -8342,6 +8420,10 @@ function oq.make_classdot_dropdown(cell)
       mask = mask + 0x20 ; -- i'm OQ leader but not clicking on my cell
     end
   end  
+  -- only available to raidleader in bg premade and only if clicking a group leader's cell
+  if (oq.raid.type == OQ.TYPE_BG) and (my_slot == 1) and (my_group == 1) and (cell.slot == 1) then
+    mask = mask + 0x40 ;
+  end
   if (my_group ~= cell.gid) or (my_slot ~= cell.slot) then
     mask = mask + 0x08 ; -- not my cell
   end
@@ -8874,10 +8956,12 @@ end
 
 function oq.on_premade_item_enter( self )
   oq.pm_tooltip_set( self, self.token ) ;
+  if (self._highlight) then self._highlight:Show() ; end 
 end
 
 function oq.on_premade_item_exit( self )
   oq.pm_tooltip_hide() ;
+  if (self._highlight) then self._highlight:Hide() ; end 
 end
 
 function oq.vip(btag)
@@ -9295,8 +9379,20 @@ function oq.create_raid_listing( parent, x, y, cx, cy, token, type )
 
   f.cy = cy ;
   f.token = token ;
---  f.texture:SetTexture( 0.0, 0.0, 0.0, 1 ) ;
---  f:SetFrameStrata( "LOW" ) ;
+
+  --
+  -- hilight
+  -- 
+  if (f._highlight == nil) then
+    local t = f:CreateTexture( nil, "BACKGROUND" ) ;
+    t:SetDrawLayer("BACKGROUND") ;
+    t:SetTexture( "INTERFACE/QUESTFRAME/UI-QuestTitleHighlight" ) ;
+    t:SetPoint( "TOPLEFT", 5, 0, "TOPLEFT", 0, 0 ) ;
+    t:SetPoint( "BOTTOMRIGHT", -5, 0, "BOTTOMRIGHT", 0, 0 ) ;
+    t:SetAlpha( 0.6 ) ;
+    t:Hide() ;
+    f._highlight = t ;
+  end
 
   local x2 = 0 ;
   f.raid_name = f.raid_name or oq.label  ( f, x2, 2, 175, cy, ""  ) ;  x2 = x2 + 185 ;
@@ -9382,10 +9478,24 @@ function oq.create_waitlist_item( parent, x, y, cx, cy, token, n_members )
   local n = "WaitRegion" ;
   local f = oq.panel( parent, n, x, y, cx, cy, true ) ;
   f:SetFrameLevel( parent:GetFrameLevel() + 10 ) ;
-  f:SetScript("OnEnter", function(self, ...) oq.set_waitlist_tooltip( self ) ; end ) ;
-  f:SetScript("OnLeave", function(self, ...) oq.tooltip_hide() ; end ) ;
+  f:SetScript("OnEnter", function(self, ...) oq.set_waitlist_tooltip( self ) ; self._highlight:Show() ; end ) ;
+  f:SetScript("OnLeave", function(self, ...) oq.tooltip_hide() ; self._highlight:Hide() ; end ) ;
   oq.waitlist_vip_check( f, token ) ;
 
+  -- 
+  -- highlight
+  --
+  if (f._highlight == nil) then
+    local t = f:CreateTexture( nil, "BACKGROUND" ) ;
+    t:SetDrawLayer("BACKGROUND") ;
+    t:SetTexture( "INTERFACE/QUESTFRAME/UI-QuestTitleHighlight" ) ;
+    t:SetPoint( "TOPLEFT", 5, 0, "TOPLEFT", 0, 0 ) ;
+    t:SetPoint( "BOTTOMRIGHT", -5, 0, "BOTTOMRIGHT", 0, 0 ) ;
+    t:SetAlpha( 0.6 ) ;
+    t:Hide() ;
+    f._highlight = t ;
+  end
+  
   f.cy = cy ;
   f.token = token ;
   local x2 = 0 ;
@@ -9822,7 +9932,7 @@ function oq.submit_btag( faction_, tag_ )
 end
 
 function oq.cache_btag( tag, note_ )
-  if (tag == nil) or (tag == "") then
+  if (tag == nil) or (tag == "") or (note_ == nil) then
     return ;
   end
   if (OQ_data.btag_cache == nil) then
@@ -12946,6 +13056,77 @@ function oq.create_helpbox( parent )
   return f ;
 end
 
+function oq.create_required_updatebox( parent, major, minor, rev ) 
+  if (parent._requiredupdate) then
+    return parent._requiredupdate ;
+  end
+  local pcx = parent:GetWidth() ;
+  local pcy = parent:GetHeight() ;
+  local cx = floor(pcx/2) ;
+  local cy = floor(4*pcy/5) ;
+  local f = oq.panel( parent, "RequiredUpdateBox", floor((pcx - cx)/2), floor((pcy - cy)/2), cx, cy) ;
+  if (oq.__backdrop07 == nil) then
+    oq.__backdrop07 = { bgFile="Interface/Tooltips/UI-Tooltip-Background", 
+                        edgeFile="Interface/Tooltips/UI-Tooltip-Border", 
+                        tile=true, tileSize = 16, edgeSize = 16,
+                        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+                      }
+  end
+  f:SetBackdrop( oq.__backdrop07 ) ;
+  f:SetBackdropColor( 0.2, 0.2, 0.2, 1.0 ) ;
+  f:SetAlpha( 1.0 ) ;
+
+  x = 40 ;
+  y = -35 ;
+  local msg = oq.CreateFrame( "SimpleHTML", "OQRequiredUpdatePoster", f ) ;
+  msg:SetPoint( "TOPLEFT"    , x, y ) ;
+  msg:SetFont( OQ.FONT, 12 ) ;
+  msg:SetWidth ( cx - 2*x ) ;
+  msg:SetHeight( cy - 2*y ) ;
+  msg:SetFont        ( OQ.FONT, 14 ) ;
+  msg:SetTextColor   ( 136/256, 221/256, 221/256, 0.8 ) ;
+  
+  msg:SetFont        ( 'p', OQ.FONT, 14 ) ;
+  msg:SetTextColor   ( 'p', 225/256, 225/256, 225/256, 0.8 ) ;
+  
+  msg:SetFont        ( 'h1', OQ.FONT, 16 ) ;
+  msg:SetTextColor   ( 'h1', 136/256, 221/256, 221/256, 0.8 ) ;
+
+  msg:SetFont        ( 'h2', OQ.FONT2, 36 ) ;
+  msg:SetShadowColor ( 'h2', 0, 0, 0, 1 ) ;
+  msg:SetShadowOffset( 'h2', 1, -1 ) ;
+  msg:SetTextColor   ( 'h2', 221/256, 36/256, 36/256, 0.8 ) ;
+  
+  msg:SetFont        ( 'h3', OQ.FONT, 22 ) ;
+  msg:SetShadowColor ( 'h3', 0, 0, 0, 1 ) ;
+  msg:SetShadowOffset( 'h3', 0, 0 ) ;
+  msg:SetTextColor   ( 'h3', 136/256, 221/256, 221/256, 0.8 ) ;
+
+  msg:SetText( string.format( L["<html><body>"..
+               "<h3 align=\"center\">oQueue v%d.%d.%d </h3>".. 
+               "<br/>"..
+               "<h2 align=\"center\">Required Update</h2>".. 
+               "<br/>"..
+               "<p>An update is required to connect to the mesh</p>"..
+               "<br/>"..
+               "<h1 align=\"left\">main site</h1>".. 
+               "<p>solidice.com</p>"..
+               "<br/>"..
+               "<h1 align=\"left\">vent support</h1>".. 
+               "<p>wow.publicvent.org : 4135  room 0</p>"..
+               "<br/>"..
+               "<h1 align=\"left\">forums</h1>".. 
+               "<p>oq.publicvent.org/forums</p>"..
+               "<br/>"..
+               "</body></html>"], major, minor, rev )) ;
+  msg:Show() ;
+  
+  f.html = msg ;
+
+  parent._requiredupdate = f ;
+  return f ;
+end
+
 function oq.onShadeHide(f)
   oq.tremove_value( getglobal("UISpecialFrames"), f:GetName() ) ;
   tinsert( getglobal("UISpecialFrames"), oq.ui:GetName() ) ;
@@ -13026,6 +13207,10 @@ end
 function oq.help_shade()
   oq.shaded_dialog( oq.create_helpbox( oq.create_ui_shade() ), nil ) ;
   OQ_data._helper_intro_shown = 1 ;
+end
+
+function oq.required_update_shade()
+  oq.shaded_dialog( oq.create_required_updatebox( oq.create_ui_shade(), oq._major, oq._minor, oq._rev ), true ) ;
 end
 
 function oq.place_tag( parent )
@@ -14194,6 +14379,63 @@ function oq.on_leave_slot( g_id, slot )
   end
 end
 
+function oq.reform_keep( name, realm, enc_data, req_token )
+  if (oq.raid.raid_token == nil) or (name == nil) or (realm == nil) or (enc_data == nil) or (req_token == nil) then
+    return ;
+  end
+  if (OQ_data.reform == nil) then
+    OQ_data.reform = tbl.new() ;
+  end
+  if (OQ_data.reform[oq.raid.raid_token] == nil) then
+    OQ_data.reform[oq.raid.raid_token] = tbl.new() ;
+  end
+  local key = strlower(name .."-".. realm) ;
+  local r = OQ_data.reform[oq.raid.raid_token] ;
+  if (r[key] == nil) then
+    r[key] = tbl.new() ;
+  end
+  r[key].name      = name ;
+  r[key].realm     = realm ;
+  r[key].enc_data  = enc_data ;
+  r[key].req_token = req_token ;
+end
+
+function oq.reform_show_keys()
+  if (OQ_data.reform == nil) then
+    return ;
+  end
+  print( "-- show reform keys" ) ;
+  for i,v in pairs(OQ_data.reform) do
+    print( "raid-token: ".. tostring(i) ) ;
+    for k,x in pairs(v) do
+      print( "  ".. tostring(k) .."  n(".. tostring(x.name) ..") r(".. tostring(x.realm) ..") t(".. tostring(x.req_token) ..")" ) ;
+    end
+  end
+  print( "--" ) ;
+end
+
+function oq.reform_clear()
+  if (OQ_data.reform == nil) then
+    return ;
+  end
+  for raid_token,group in pairs(OQ_data.reform) do
+    for key,p in pairs(group) do
+      group[key] = tbl.delete( group[key] ) ;
+    end
+    OQ_data.reform[ raid_token ] = tbl.delete( OQ_data.reform[ raid_token ] ) ;
+  end
+end
+
+function oq.reform_trigger( gid, slot, key )
+  if (oq.raid.raid_token == nil) or (not oq.iam_party_leader()) or (OQ_data.reform[oq.raid.raid_token] == nil) then
+    return ;
+  end
+  local r = OQ_data.reform[oq.raid.raid_token] ;
+  if (r[key]) then
+    oq.on_proxy_invite( gid, slot, r[key].enc_data, r[key].req_token ) ;
+  end
+end
+
 --
 -- intended for group leader 
 --
@@ -14223,18 +14465,21 @@ function oq.on_proxy_invite( group_id, slot_, enc_data_, req_token_ )
               tostring(slot_) ..","..
               enc_data ..","..
               oq.raid.raid_token ..","..
-              req_token_ ;
+              tostring(req_token_ or 0) ;
               
   -- this is the target name, realm, and real-id
   local  name, realm, rid_, realmid_ = oq.decode_data( "abc123", enc_data_ ) ;
+  oq.reform_keep( name, realm, enc_data_, req_token_ ) ;
+  
   if (realm == player_realm) then
     -- on my realm, let player know he's in my group then invite him
-    oq.realid_msg( name, realm, rid_, msg ) ;
+    oq.realid_msg( name, realm, rid_, msg, true ) ;
     oq.timer_oneshot( 1.0, oq.InviteUnit, name, realm, req_token_ ) ;
     return ;
   end
   
   local key = name .."-".. realm ;
+  
   if (oq.pending_invites == nil) then
     oq.pending_invites = tbl.new() ;
   end
@@ -14244,10 +14489,12 @@ function oq.on_proxy_invite( group_id, slot_, enc_data_, req_token_ )
   oq.pending_invites[ key ].slot      = slot_ ;
   oq.pending_invites[ key ].rid       = rid_ ;
   oq.pending_invites[ key ].req_token = req_token_  ;
+  
+  oq.names[ strlower(key) ] = rid_ ;
 
   local pid = oq.bnpresence( key ) ;
   if (pid ~= 0) then
-    oq.realid_msg( name, realm, rid_, msg ) ;
+    oq.realid_msg( name, realm, rid_, msg, true ) ;
     oq.timer_oneshot( 1.0, oq.InviteUnit, name, realm, req_token_ ) ;
     return ;
   end
@@ -15042,6 +15289,7 @@ function oq.on_promote( g_id, name, realm, lead_rid, leader_realm, req_token )
 end
 
 function oq.on_invite_group( req_token, group_id, slot, raid_name, raid_leader_class, enc_data, raid_token, raid_notes )
+  _ok2relay  = nil ;
   if (not oq.is_my_token( req_token )) then
     return ;
   end
@@ -15381,6 +15629,15 @@ function oq.on_premade( raid_tok, raid_name, premade_info, enc_data, bgs_, type_
   local faction, has_pword, is_realm_specific, is_source, level_range, 
         min_ilevel, min_resil, nmembers, nwaiting, status, tm_, min_mmr, karma  = oq.decode_premade_info( premade_info ) ;
         
+  local now = oq.utc_time() ;
+  if (oq._p8s == nil) then oq._p8s = tbl.new() ; end 
+  if (now < (oq._p8s[raid_tok] or 0)) then 
+    _ok2relay = nil ;
+    _reason = "too soon" ;
+    return ;
+  end
+  oq._p8s[raid_tok] = now + 10 ; -- do not process another msgs from this premade for 10 seconds
+        
   local raid_tm_token = raid_tok ..".".. tm_ ;
   if (oq.token_was_seen( raid_tm_token ) or (faction ~= player_faction)) then
     _ok2relay = nil ;
@@ -15397,7 +15654,7 @@ function oq.on_premade( raid_tok, raid_name, premade_info, enc_data, bgs_, type_
                            
   -- 
   -- oq.pkt_recv._aps is being used to determine if the mesh is 'busy' and to back off if it is
-  if (oq.pkt_recv._aps > 30) then
+  if (oq.pkt_recv._aps > OQ.RELAY_OVERLOAD) then
     _ok2relay = nil ;
     _reason = "mesh load" ;
   end
@@ -15485,7 +15742,7 @@ function oq.process_premade_info( raid_tok, raid_name, faction, level_range, ile
     premade.leader_xp     = leader_xp_ ;
     premade.karma         = karma_ ;
     if (is_source == 0) then
-      premade.next_advert = now + OQ_SEC_BETWEEN_ADS + oq.random(1,10) ;
+      premade.next_advert = now + OQ_SEC_BETWEEN_ADS ;
     end
     local is_update = (premade.name ~= raid_name) and (raid_name ~= nil) ;
     premade.has_pword         = has_pword ;
@@ -15517,7 +15774,7 @@ function oq.process_premade_info( raid_tok, raid_name, faction, level_range, ile
                               karma        = karma_,
                               tm           = tm_,  -- owner's time
                               last_seen    = now,  -- my time
-                              next_advert  = now + OQ_SEC_BETWEEN_ADS + oq.random(1,10),
+                              next_advert  = now + OQ_SEC_BETWEEN_ADS,
                               stats = { nMembers    = tonumber(nMem), 
                                         nWaiting    = tonumber(nWait),
                                         status      = status_,
@@ -15625,7 +15882,8 @@ function oq.send_invite_response( name, realm, realid, raid_token, req_token, an
                     raid_token ..","..
                     req_token ..","..
                     answer ..","..
-                    (reason or ".")
+                    (reason or "."),
+                    true
                   ) ;
 end
 
@@ -15759,6 +16017,87 @@ function oq.is_qualified( m )
   return true ;
 end
 
+function oq.reform_group( g_id ) 
+  if (not oq.iam_raid_leader()) then
+    return ;
+  end
+  if (g_id == 1) then
+    -- reforming my own group
+    oq.do_reform( oq.raid.raid_token, g_id ) ;
+    return ;
+  end
+
+  local msg = OQ_MSGHEADER .."".. 
+              OQ_VER ..","..
+              "W1,"..
+              "0,"..
+              "reform,"..                 
+              tostring(oq.raid.raid_token) ..","..
+              tostring(g_id) ;
+  
+  local lead = oq.raid.group[g_id].member[1] ;
+  if (lead.realm == player_realm) then
+    -- on my realm, let player know he's in my group then invite him
+    oq.realid_msg( lead.name, lead.realm, lead.realid, msg, true ) ;
+  end
+  
+  local presenceID = oq.bnpresence( lead.name .."-".. lead.realm ) ;
+  if (presenceID) and (presenceID > 0) then
+    oq.BNSendWhisper_now( presenceID, msg, lead.name, lead.realm ) ;
+  end
+end
+
+function oq.on_reform( raid_token, group_id )
+  _ok2relay = nil ;
+  group_id = tonumber( group_id ) ;
+  if (raid_token ~= oq.raid.raid_token) or (my_group ~= group_id) or (my_slot ~= 1) or (not oq.iam_party_leader()) or (oq.raid.type ~= OQ.TYPE_BG) then
+    return ;
+  end
+  if (_source ~= "bnet") and (_source ~= "addon") and (my_group ~= 1) then
+    return ;
+  end
+  if (oq._sender ~= tostring(oq.raid.leader .."-".. oq.raid.leader_realm)) then
+    return ;
+  end
+  local dialog = StaticPopup_Show("OQ_ReformGroup", raid_token ) ;
+  if (dialog ~= nil) then
+    dialog.data  = raid_token ;
+    dialog.data2 = group_id ;
+    dialog:SetWidth( 200 ) ;
+    dialog:SetHeight( 100 ) ;
+  end                                                            
+end
+
+function oq.do_reform( raid_token, group_id )
+  local t = tbl.new() ;
+  local n = oq.GetNumPartyMembers() ;
+  for i=1,n do
+    local designation = "party".. i ;
+    local name, realm = UnitName( designation ) ;
+    if (name) then
+      if (realm == nil) or (realm == "") then
+        realm = player_realm ;
+      end
+      local key = strlower( name .."-".. realm ) ;
+      t[key] = name ;
+      UninviteUnit( name ) ;
+    end
+  end
+  
+  local slot = 2 ;
+  local pm = OQ_data.reform[oq.raid.raid_token] ;
+  if (pm) then
+    for k,v in pairs(t) do
+      local n = pm[k] ;
+      if (n) then
+        oq.timer_oneshot( 1.0 + slot * 0.2, oq.on_proxy_invite, group_id, slot, n.enc_data, n.req_token ) ;
+      end
+      slot = slot + 1 ;
+    end
+  end
+  tbl.delete( t ) ;
+end
+
 function oq.on_req_invite( raid_token, raid_type, n_members_, req_token, enc_data, stats, pword )
   if (not oq.iam_raid_leader()) then
     return ;
@@ -15823,6 +16162,8 @@ function oq.on_req_invite( raid_token, raid_type, n_members_, req_token, enc_dat
   oq.waitlist[ req_token ].n_members = n_members_ ;
   oq.waitlist[ req_token ].bgroup    = oq.find_bgroup( realm_ ) ;
   oq.waitlist[ req_token ].create_tm = oq.utc_time() ;
+  
+  oq.names[ strlower(name_ .."-".. realm_) ] = realid_ ;
   
   local x, y, cy ;
   x  = 2 ;
@@ -17068,21 +17409,26 @@ function oq.verify_version( proto_version, oq_version )
     end
     return ;
   end
-  local is_required = (proto_version ~= OQ_VER) ;
+  oq._update_required = (proto_version ~= OQ_VER) ;
   -- update ui component to reflect new version
-  oq.version_marquee = oq.create_version_marquee() ;
-  oq.version_marquee.line_1:SetText( string.format( OQ.DLG_18a, major, minor, rev )) ;
-  if (is_required) then
-    oq.version_marquee.line_2:SetText( OQ.DLG_18b ) ;
-    oq.version_marquee:SetHeight(65) ;
-    oq.version_marquee.line_2:Show() ;
+  if (oq._update_required) then
+--    oq.version_marquee.line_2:SetText( OQ.DLG_18b ) ;
+--    oq.version_marquee:SetHeight(65) ;
+--    oq.version_marquee.line_2:Show() ;
+    oq._major = major ;
+    oq._minor = minor ;
+    oq._rev   = rev ;
+    oq.required_update_shade() ;
   else
+    oq.version_marquee = oq.create_version_marquee() ;
+    oq.version_marquee.line_1:SetText( string.format( OQ.DLG_18a, major, minor, rev )) ;
     oq.version_marquee:SetHeight(35) ;
     oq.version_marquee.line_2:Hide() ;
+    oq.version_marquee:Show() ;
   end
-  oq.version_marquee:Show() ;
-  if (oq._fanfare_queued == nil) then
-    oq._fanfare_queued = 1 ;
+  local now = oq.utc_time() ;
+  if (OQ_data._fanfare_queued == nil) or (OQ_data._fanfare_queued < now) then
+    OQ_data._fanfare_queued = now + 2*60*60 ; -- let's you know once every 2 hours
     -- will check every second to see if the marquee is up, and when it is 
     -- it'll play the fanfare and stop the timer
     oq.timer( "fanfare", 1, oq.new_version_fanfare, true ) ;
@@ -17090,7 +17436,7 @@ function oq.verify_version( proto_version, oq_version )
 end
 
 function oq.new_version_fanfare()
-  if (not oq.version_marquee:IsVisible()) then
+  if (oq.version_marquee) and (not oq.version_marquee:IsVisible()) then
     return nil ;
   end
   oq.excited_cheer() ;
@@ -18864,7 +19210,7 @@ function oq.procs_init()
   oq.proc[ "invite_group"       ] = oq.on_invite_group ;
   oq.proc[ "invite_req_response"] = oq.on_invite_req_response ;
   oq.proc[ "join"               ] = oq.on_join ;
-  oq.proc[ "k2"                 ] = oq.on_karma ;
+  oq.proc[ "k3"                 ] = oq.on_karma ;
   oq.proc[ "lag_times"          ] = oq.on_lag_times ;
   oq.proc[ "leave"              ] = oq.on_leave ;
   oq.proc[ "leave_slot"         ] = oq.on_leave_slot ;
@@ -18895,6 +19241,7 @@ function oq.procs_init()
   oq.proc[ "raid_join"          ] = oq.on_raid_join ;
   oq.proc[ "ready_check"        ] = oq.on_ready_check ;
   oq.proc[ "ready_check_complete"] = oq.on_ready_check_complete ;
+  oq.proc[ "reform"             ] = oq.on_reform ;
   oq.proc[ "remove"             ] = oq.on_remove ;
   oq.proc[ "remove_group"       ] = oq.on_remove_group ;
   oq.proc[ "removed_from_waitlist" ] = oq.on_removed_from_waitlist ;
@@ -18916,7 +19263,7 @@ function oq.procs_init()
   oq.bg_msgids[ "pass_lead"       ] = 1 ;
   oq.bg_msgids[ "p8"              ] = 1 ;
   oq.bg_msgids[ "fog"             ] = 1 ;
-  oq.bg_msgids[ "k2"              ] = 1 ;
+  oq.bg_msgids[ "k3"              ] = 1 ;
   oq.bg_msgids[ "report_recvd"    ] = 1 ;
   oq.bg_msgids[ "bb"              ] = 1 ;  -- was "thebook"
   oq.bg_msgids[ "top_dps_recvd"   ] = 1 ;
@@ -18941,7 +19288,7 @@ function oq.procs_join_raid()
   oq.proc[ "invite_group_lead"     ] = oq.on_invite_group_lead ;
   oq.proc[ "invite_group"          ] = oq.on_invite_group ;
   oq.proc[ "invite_req_response"   ] = oq.on_invite_req_response ;
-  oq.proc[ "k2"                    ] = oq.on_karma ;
+  oq.proc[ "k3"                    ] = oq.on_karma ;
   oq.proc[ "leave_waitlist"        ] = oq.on_leave_waitlist ;  
   oq.proc[ "mbox_bn_enable"        ] = oq.on_mbox_bn_enable ;
   oq.proc[ "mesh_tag"              ] = oq.on_mesh_tag ;
@@ -18993,6 +19340,7 @@ function oq.procs_join_raid()
   oq.proc[ "queue_tm"           ] = oq.on_queue_tm ;
   oq.proc[ "ready_check"        ] = oq.on_ready_check ;
   oq.proc[ "ready_check_complete"] = oq.on_ready_check_complete ;
+  oq.proc[ "reform"             ] = oq.on_reform ;
   oq.proc[ "remove"             ] = oq.on_remove ;
   oq.proc[ "remove_group"       ] = oq.on_remove_group ;
   oq.proc[ "role_check"         ] = oq.on_role_check ;
@@ -19032,6 +19380,7 @@ function oq.procs_no_raid()
   oq.proc[ "queue_tm"           ] = nil ;
   oq.proc[ "ready_check"        ] = nil ;
   oq.proc[ "ready_check_complete"] = nil ;
+  oq.proc[ "reform"             ] = nil ;
   oq.proc[ "remove"             ] = nil ;
   oq.proc[ "remove_group"       ] = nil ;
   oq.proc[ "role_check"         ] = nil ;
@@ -19058,7 +19407,9 @@ function oq.on_addon_event( prefix, msg, channel, sender )
   end
   _ok2relay  = nil ;
   oq._sender = sender ;
-
+  if (oq._sender:find("-") == nil) and (player_realm) then
+    oq._sender = oq._sender .."-".. tostring(player_realm) ;
+  end
   oq.process_msg( sender, msg ) ;  
   oq.post_process() ;
 end
@@ -19368,6 +19719,7 @@ function oq.process_msg( sender, msg )
     _ok2relay = nil ;
     _reason = "direct whisper" ;
   end
+
   _msg_token     = token ;
   _msg_id        = msg_id ;
   _received      = nil ;
@@ -19700,6 +20052,12 @@ function oq.on_player_target_change()
   end
 
   oq.inspect_check() ;  
+end
+
+function OQ_AutoInspect()
+  if (UnitIsFriend("player","target") and CanInspect("target") and not InCombatLockdown()) then
+    InspectUnit("target") ;
+  end
 end
 
 function oq.on_queue_tm( g_id, s1, tm1, s2, tm2 ) 
@@ -20147,6 +20505,9 @@ function oq.assign_raid_seats()
       end
       if (OQ_data._members[key] == nil) then
         OQ_data._members[key] = "x" ;
+      end
+      if (oq.raid.group[gid].member[ slot ].realid == nil) then
+        oq.raid.group[gid].member[ slot ].realid = oq.names[ key ] ;
       end
     end
   end
@@ -21819,9 +22180,9 @@ function oq.on_init( now )
   oq.timer_oneshot(  2, oq.hook_inspectdoll            ) ;
   oq.timer_oneshot(  2, oq.hook_error_frame            ) ;
   oq.timer_oneshot(2.5, oq.recover_premades            ) ;
-  oq.timer_oneshot(  3, oq.advertise_my_raid           ) ;
   oq.timer_oneshot(  3, oq.cache_mmr_stats             ) ;
   oq.timer_oneshot(  4, oq.clean_karma_log             ) ;
+  oq.timer_oneshot(  5, oq.advertise_my_raid           ) ;
   oq.timer_oneshot(  5, oq.delayed_button_load         ) ;
   oq.timer_oneshot(  6, Register_Logout_Prehook        ) ;
   oq.timer_oneshot(  7, oq.init_bn_custom_msg          ) ;
@@ -21840,24 +22201,25 @@ function oq.on_init( now )
   oq.bn_check_online() ;
   
   -- define timers
-  oq.timer( "chk4dead_premade"  ,   30, oq.remove_dead_premades          , true ) ;
-  oq.timer( "advertise_premade" ,   30, oq.advertise_my_raid             , true ) ;  
-  oq.timer( "join_OQGeneral"    ,   20, oq.oqgeneral_join                , nil  ) ; 
-  oq.timer( "report_premades"   ,   20, oq.report_premades               , nil  ) ; 
-  oq.timer( "report_submits"    ,   20, oq.timed_submit_report           , true ) ;
-  oq.timer( "clear_the_dead"    ,   15, oq.clear_the_dead                , true ) ;
-  oq.timer( "update_nfriends"   ,   15, oq.bn_check_online               , true ) ;
-  oq.timer( "chk4dead_group"    ,   15, oq.check_for_dead_group          , true ) ;
-  oq.timer( "auto_role_check"   ,   15, oq.auto_set_role                 , true ) ;
-  oq.timer( "bnet_friend_req"   ,   10, oq.on_bnet_friend_invite         , true ) ;
-  oq.timer( "the_check"         ,    5, oq.the_check                     , true ) ;
-  oq.timer( "reset_buttons"     ,    5, oq.normalize_static_button_height, true ) ;
+  oq.timer( "chk4dead_premade"  ,    30, oq.remove_dead_premades          , true ) ;
+  oq.timer( "advertise_premade" ,    30, oq.advertise_my_raid             , true ) ;  
+  oq.timer( "join_OQGeneral"    ,    20, oq.oqgeneral_join                , nil  ) ; 
+  oq.timer( "report_premades"   ,    20, oq.report_premades               , nil  ) ; 
+  oq.timer( "report_submits"    ,    20, oq.timed_submit_report           , true ) ;
+  oq.timer( "clear_the_dead"    ,    15, oq.clear_the_dead                , true ) ;
+  oq.timer( "update_nfriends"   ,    15, oq.bn_check_online               , true ) ;
+  oq.timer( "chk4dead_group"    ,    15, oq.check_for_dead_group          , true ) ;
+  oq.timer( "auto_role_check"   ,    15, oq.auto_set_role                 , true ) ;
+  oq.timer( "bnet_friend_req"   ,    10, oq.on_bnet_friend_invite         , true ) ;
+  oq.timer( "the_check"         ,     5, oq.the_check                     , true ) ;
+  oq.timer( "reset_buttons"     ,     5, oq.normalize_static_button_height, true ) ;
 --  oq.timer( "populate_dtime"    ,    5, oq.populate_dtime                , true ) ;
-  oq.timer( "calc_pkt_stats"    ,    1, oq.calc_pkt_stats                , true ) ;
-  oq.timer( "check_stats"       ,    4, oq.check_stats                   , true ) ;  -- check party and personal stats every 3 seconds; only send if changed
-  oq.timer( "chk_bg_status"     ,    3, oq.check_bg_status               , true ) ;
-  oq.timer( "waitlist update"   ,    1, oq.update_wait_times             , true ) ;
-  oq.timer( "bn_send_q"         , 0.05, oq.BNSendQ_pop                   , true ) ; -- 20 times per second, throttles bn msgs
+  oq.timer( "calc_pkt_stats"    ,     1, oq.calc_pkt_stats                , true ) ;
+  oq.timer( "check_stats"       ,     4, oq.check_stats                   , true ) ;  -- check party and personal stats every 3 seconds; only send if changed
+  oq.timer( "chk_bg_status"     ,     3, oq.check_bg_status               , true ) ;
+  oq.timer( "waitlist update"   ,     1, oq.update_wait_times             , true ) ;
+  oq.timer( "bn_send_q"         , 0.250, oq.send_queued_msgs              , true ) ; -- 20 times per second, throttles bn msgs
+--  oq.timer( "bn_send_q"         , 0.05, oq.BNSendQ_pop                   , true ) ; -- 20 times per second, throttles bn msgs
 
 -- should be no need for this, as any changes to your karma should be waiting for you in your btag friends list
 -- *  except if you're friended to the scorekeeper
@@ -22359,6 +22721,10 @@ function oq.ui_toggle()
       oq.banned_shade() ;
       return ;
     end
+    if (oq._update_required) then
+      oq.required_update_shade() ;
+      return ;
+    end
     -- initial prep
     if (OQ_data.auto_join_oqgeneral == 1) then
       oq.channel_join( "OQGeneral" ) ;  -- just in case
@@ -22715,3 +23081,6 @@ function OQ_MinimapButton_DraggingFrame_OnUpdate()
   OQ_MinimapButton_Reposition() -- move the button
 end
 
+function OQ_hide_menu_popup()
+  oq.menu_hide() ;
+end

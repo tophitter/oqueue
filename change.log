@@ -1,5 +1,13 @@
 ﻿change.log for oQueue
 
+v1.6.9  ** mandatory update **    (blizz api changes and oqueue protocol updates)
+        BUGFIX: popup menus on wait list will no longer be 'under' buttons
+        UPD: performance tweaks and various bug fixes
+        UPD: improved group invites for regular bgs
+        add: group reformation (only available for the group leader; right-click group leader)
+        add: auto-inspect target keybinding
+        add: on hover highlight for find-premade, wait-list, and ban-list boxes
+
 v1.6.8  BUGFIX: mesh nodes added on login now flagged for 'remove now' (desc tag not being held at login)
         BUGFIX: final reminent of the timezone adjustment removed.  you can still adjust if needed, but that should be unnecessary now
         BUGFIX: karma sent from same realm as scorekeeper will now be accepted
