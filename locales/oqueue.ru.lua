@@ -17,7 +17,8 @@ if ( GetLocale() ~= "ruRU" ) then
 end
 local L = OQ._T ; -- for literal string translations
 BINDING_HEADER_OQUEUE = "oQueue";
-BINDING_NAME_TOGGLE_OQUEUE = "Toggle oQueue";
+BINDING_NAME_TOGGLE_OQUEUE = "Скрыть/показать oQueue";
+BINDING_NAME_AUTO_INSPECT  = "Автоматический осмотр";
 
 OQ.TITLE_LEFT         = "oQueue v" ;
 OQ.TITLE_RIGHT        = " - поиск премейдов" ;
@@ -163,6 +164,7 @@ OQ.STILL_IN_PREMADE   = "пожалуйста выйдите из своего �
 OQ.DD_PROMOTE         = "назначить лидером группы" ;
 OQ.DD_KICK            = "удалить игрока" ;
 OQ.DD_BAN             = "забанить battle.tag игрока" ;
+OQ.DD_REFORM          = "пересобрать группу" ;
 OQ.DISABLED           = "oQueue отключен" ;
 OQ.ENABLED            = "oQueue включен" ;
 OQ.THETIMEIS          = "время %d (GMT)" ;
