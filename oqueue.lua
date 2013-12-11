@@ -123,9 +123,9 @@ end
 -------------------------------------------------------------------------------
 
 local OQ_MAJOR                 = 1 ;
-local OQ_MINOR                 = 6 ;
-local OQ_REVISION              = 9 ;
-local OQ_BUILD                 = 169 ;
+local OQ_MINOR                 = 7 ;
+local OQ_REVISION              = 0 ;
+local OQ_BUILD                 = 170 ;
 local OQ_SPECIAL_TAG           = "" ;
 local OQUEUE_VERSION           = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) ..".".. OQ_REVISION ;
 local OQUEUE_VERSION_SHORT     = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) .."".. OQ_REVISION ;
@@ -2649,6 +2649,11 @@ function oq.BNSendFriendInvite( id, msg, note, name_, realm_ )
   oq.pkt_sent:inc() ;
 end
 
+function oq.SendAddonMessage_now( channel, msg, type, to_name )
+  SendAddonMessage( channel, msg, type, to_name ) ;
+  oq.pkt_sent:inc() ;
+end
+
 function oq.SendAddonMessage( channel, msg, type, to_name )
   if (msg == nil) then
     return ;
@@ -2657,20 +2662,15 @@ function oq.SendAddonMessage( channel, msg, type, to_name )
     msg = msg:sub(1,254) ;
   end
   if (type == "PARTY") and ((oq.raid.type == OQ.TYPE_RBG) or (oq.raid.type == OQ.TYPE_RAID)) then
-    SendAddonMessage( channel, msg, "INSTANCE_CHAT", nil ) ;
-    oq.pkt_sent:inc() ;
+    oq.BNSendQ_push( oq.SendAddonMessage_now, channel, msg, "INSTANCE_CHAT", nil ) ;
   elseif (type == "PARTY") then
-    SendAddonMessage( channel, msg, "PARTY", nil ) ;
-    oq.pkt_sent:inc() ;
+    oq.BNSendQ_push( oq.SendAddonMessage_now, channel, msg, "PARTY", nil ) ;
   elseif (type == "INSTANCE_CHAT") then
-    SendAddonMessage( channel, msg, type, to_name ) ;
-    oq.pkt_sent:inc() ;
+    oq.BNSendQ_push( oq.SendAddonMessage_now, channel, msg, type, to_name ) ;
   elseif (type == "WHISPER") and (to_name) then
-    SendAddonMessage( channel, msg, type, to_name ) ;
-    oq.pkt_sent:inc() ;
+    oq.BNSendQ_push( oq.SendAddonMessage_now, channel, msg, type, to_name ) ;
   elseif (string.find(msg, ",p8,") == nil) then
-    oq.BNSendQ_push( SendAddonMessage, channel, msg, type, to_name ) ;
-    oq.pkt_sent:inc() ;
+    oq.BNSendQ_push( oq.SendAddonMessage_now, channel, msg, type, to_name ) ;
   end  
 end
 

@@ -1,5 +1,7 @@
 ﻿change.log for oQueue
 
+v1.7.0  BUGFIX: was sending too many packets/sec; placed msgs on queue to throttle/restrict/drop
+
 v1.6.9  ** mandatory update **    (blizz api changes and oqueue protocol updates)
         BUGFIX: popup menus on wait list will no longer be 'under' buttons
         UPD: performance tweaks and various bug fixes
