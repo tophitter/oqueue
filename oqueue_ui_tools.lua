@@ -237,7 +237,7 @@ end
 function oq.radiobutton( parent, x, y, cx, cy, text_cx, text, value, on_click_func )
   oq.nthings = (oq.nthings or 0) + 1 ;
   local n = "OQ_RadioButton".. oq.nthings ;
-  button = oq.CreateFrame("CheckButton", n, parent, "UIRadioButtonTemplate")
+  local button = oq.CreateFrame("CheckButton", n, parent, "UIRadioButtonTemplate")
   button:SetWidth(cx)
   button:SetHeight(cy)
   button.value = value ;

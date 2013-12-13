@@ -124,8 +124,8 @@ end
 
 local OQ_MAJOR                 = 1 ;
 local OQ_MINOR                 = 7 ;
-local OQ_REVISION              = 0 ;
-local OQ_BUILD                 = 170 ;
+local OQ_REVISION              = 1 ;
+local OQ_BUILD                 = 171 ;
 local OQ_SPECIAL_TAG           = "" ;
 local OQUEUE_VERSION           = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) ..".".. OQ_REVISION ;
 local OQUEUE_VERSION_SHORT     = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) .."".. OQ_REVISION ;
@@ -186,6 +186,7 @@ local skip_stats               = 0 ;
 local last_stats               = "" ;
 local player_name              = nil ;
 local player_class             = nil ;
+local player_guid              = nil ;
 local player_realm             = nil ;
 local player_realm_id          = 0 ;
 local player_realid            = nil ;
@@ -575,6 +576,9 @@ function oq.hook_options()
   oq.options[ "-v"          ] = oq.show_version ;
   oq.options[ "wallet"      ] = oq.show_wallet ;
   oq.options[ "who"         ] = oq.show_bn_enabled ;
+  
+  oq.options[ "kk"          ] = function()
+  end
 end
 
 local bg_points = { [1] = "AB"  ,
@@ -1686,6 +1690,8 @@ function oq.show_data( opt )
     oq.frame_report() ;
   elseif (opt == "wallet") then
     oq.show_wallet() ;
+  elseif (opt == "income") then
+    oq.check_currency() ;
   end
 end
 
@@ -1894,12 +1900,14 @@ end
 function oq.oq_off() 
   OQ_toon.disabled = true ;
   oq.reset_bn_custom_msg() ;
+  oq.turnon_CLEU_ifneeded() ;
   print( OQ.DISABLED ) ;
 end
 
 function oq.oq_on() 
   OQ_toon.disabled = nil ;
   oq.init_bn_custom_msg() ;
+  oq.turnon_CLEU_ifneeded() ;
   print( OQ.ENABLED ) ;
 end
 
@@ -2785,7 +2793,7 @@ function oq.debug_report( ... )
 end
 
 QQ = {}
-QQ.ilvl = 2
+QQ.ilvl = 0
 
 function oq.get_ilevel()
   return QQ.ilvl + floor( select( 2, GetAverageItemLevel() )) ;
@@ -2873,11 +2881,12 @@ function oq.mark_currency()
     end
   end
   -- mark xp
+  OQ_toon.player_wallet[ "level" ] = UnitLevel("player") or 0 ;
   OQ_toon.player_wallet[ "xp"    ] = UnitXP   ("player") or 0 ;
   OQ_toon.player_wallet[ "maxxp" ] = UnitXPMax("player") or 0 ;
   
   -- mark hks  
-  OQ_toon.player_wallet[ "hks"   ] = GetStatistic(588) or 0 ;
+  OQ_toon.player_wallet[ "hks"   ] = tonumber(GetStatistic(588) or 0) or 0 ;
   
   -- mark dkps
   OQ_toon.player_wallet[ "leader_dkp" ] = OQ_data.leader_dkp or 0 ;
@@ -2887,7 +2896,7 @@ function oq.mark_currency()
   OQ_toon.player_wallet[ "mmr"   ] = oq.get_mmr() or 0 ;
   
   -- mark money
-  OQ_toon.player_wallet[ "money" ] = GetMoney() or 0 ;
+  OQ_toon.player_wallet[ "money" ] = tonumber(GetMoney() or 0) or 0 ;
 end
 
 function oq.check_currency()
@@ -2896,7 +2905,11 @@ function oq.check_currency()
     -- invalidates the rate calculation, but keeps it sane(ish)
     OQ_data.stats.bg_length = 1 ;
   end
-  if (oq._instance_duration == nil) or (oq._instance_duration == 0) then
+  local duration = oq._instance_duration ;
+  if (duration == nil) or (duration == 0) and ((oq._instance_tm ~= nil) and (oq._instance_tm > 0)) then
+    duration = oq.utc_time() - oq._instance_tm ;
+  end
+  if (duration == nil) or (duration == 0) then
     print( OQ_LILREDX_ICON .." ".. OQ.ERR_NODURATION ) ;
     return ;
   end
@@ -2909,7 +2922,7 @@ function oq.check_currency()
      if (name ~= nil) and (OQ_toon.player_wallet[ name ] ~= nil) then
        if (OQ_toon.player_wallet[ name ] ~= count) then
          local delta = count - OQ_toon.player_wallet[name] ;
-         local rate = floor( (delta / oq._instance_duration) * 60 * 60 ) ; -- bg_length is seconds * 60*60 --> delta/hr
+         local rate = floor( (delta / duration) * 60 * 60 ) ; -- bg_length is seconds * 60*60 --> delta/hr
          if (delta > 0) then
            if (name == OQ.HONOR_PTS) and (count == OQ_MAX_HONOR) then -- honor capped
              oq.log( true, name .."  ".. OQ_LILREDX_ICON .." ".. OQ.CAPPED .." ".. OQ_LILREDX_ICON ) ;
@@ -2933,7 +2946,7 @@ function oq.check_currency()
           canToggleAtWar, isHeader, isCollapsed, hasRep, isWatched, isChild = GetFactionInfo(factionIndex)
     if (name ~= nil) and (OQ_toon.player_wallet[ name ] ~= nil) then
       local delta = count - OQ_toon.player_wallet[name] ;
-      local rate = floor( (delta / oq._instance_duration) * 60 * 60 ) ; -- bg_length is seconds * 60*60 --> delta/hr
+      local rate = floor( (delta / duration) * 60 * 60 ) ; -- bg_length is seconds * 60*60 --> delta/hr
       if (delta > 0) then
         oq.log( true, OQ.GAINED .." ".. delta .." ".. OQ.WITH .." ".. name .."  (".. rate .." ".. OQ.PERHOUR ..")" ) ;
       elseif (delta < 0) then
@@ -2943,29 +2956,30 @@ function oq.check_currency()
   end
   
   -- check for gains in xp
+  local level = UnitLevel("player") ;
   local xp = UnitXP("player") ;
   local maxxp = UnitXPMax("player") ;
   local delta = 0 ;
-  if (maxxp ~= OQ_toon.player_wallet[ "maxxp" ]) then
+  if (level ~= OQ_toon.player_wallet[ "level" ]) then
     -- gained level
-    -- note: won't handle gaining more then one level per bg.  not sure that's even possible
+    -- note: won't handle gaining more then one level per bg.  don't have the maxxp per level to calculate
     delta = (OQ_toon.player_wallet[ "maxxp" ] - OQ_toon.player_wallet[ "xp" ]) + xp ;
   elseif (xp ~= OQ_toon.player_wallet[ "xp" ]) then
     delta = xp - OQ_toon.player_wallet[ "xp" ] ;
   end
   if (delta > 0) then
     -- report gained xp
-    local rate = floor( (delta / oq._instance_duration) * 60 * 60 ) ; -- bg_length is seconds * 60*60 --> delta/hr
+    local rate = floor( (delta / duration) * 60 * 60 ) ; -- bg_length is seconds * 60*60 --> delta/hr
     oq.log( true, OQ.GAINED .." ".. delta .." XP  (".. rate .." ".. OQ.PERHOUR ..")" ) ;
   end
   
   -- check for gains in hks
   if (OQ_toon.player_wallet[ "hks" ]) then
     local hks = tonumber(GetStatistic(588) or 0) or 0 ;
-    delta = hks - tonumber( OQ_toon.player_wallet[ "hks" ] or 0 ) ;
+    delta = hks - (tonumber( OQ_toon.player_wallet[ "hks" ] or 0 ) or 0) ;
     if (delta > 0) then
       -- report gained hks
-      local rate = floor( (delta / oq._instance_duration) * 60 * 60 ) ; -- bg_length is seconds * 60*60 --> delta/hr
+      local rate = floor( (delta / duration) * 60 * 60 ) ; -- bg_length is seconds * 60*60 --> delta/hr
       oq.log( true, OQ.GAINED .." ".. delta .." HKs  (".. rate .." ".. OQ.PERHOUR ..")" ) ;
     end
   end
@@ -2976,7 +2990,7 @@ function oq.check_currency()
     delta = (OQ_data._dkp or 0) - OQ_toon.player_wallet[ "dkp" ] ;
     if (delta > 0) then
       -- report gained dkps
-      local rate = floor( (delta / oq._instance_duration) * 60 * 60 ) ; -- bg_length is seconds * 60*60 --> delta/hr
+      local rate = floor( (delta / duration) * 60 * 60 ) ; -- bg_length is seconds * 60*60 --> delta/hr
       oq.log( true, OQ.GAINED .." ".. delta .." ".. OQ.TT_DKP .." (".. rate .." ".. OQ.PERHOUR ..")" ) ;
     end
   end
@@ -2992,16 +3006,15 @@ function oq.check_currency()
 
   if (OQ_data.nrage > 0) and (oq._instance_type == "pvp") then
     oq.report_rage() ;
-  else
-    local dsec = oq.utc_time() - oq._instance_tm ;
-    oq.log( true, OQ.INSTANCE_LASTED .." ".. floor(dsec / 60) ..":".. string.format( "%02d", floor( dsec % 60) ) ) ;
+  elseif (oq._instance_end_tm) and (oq._instance_end_tm > 0) then
+    oq.log( true, OQ.INSTANCE_LASTED .." ".. floor(duration / 60) ..":".. string.format( "%02d", floor( duration % 60) ) ) ;
   end
   
   -- report money 
   if (OQ_toon.player_wallet[ "money" ]) then
     local money = GetMoney() ;
-    delta = money - tonumber( OQ_toon.player_wallet[ "money" ] or 0 ) ;
-    local rate = floor( (delta / oq._instance_duration) * 60 * 60 ) ; -- bg_length is seconds * 60*60 --> delta/hr
+    delta = money - (tonumber( OQ_toon.player_wallet[ "money" ] or 0 ) or 0) ;
+    local rate = floor( (delta / duration) * 60 * 60 ) ; -- bg_length is seconds * 60*60 --> delta/hr
     -- shave the pennies
     delta = floor(delta/100)*100 ;
     rate  = floor(rate /100)*100 ;
@@ -3009,7 +3022,7 @@ function oq.check_currency()
     if (delta > 0) then
       oq.log( true, OQ.GAINED .." ".. GetCoinTextureString(delta) .."    (".. GetCoinTextureString(rate) .." ".. OQ.PERHOUR ..")" ) ;
     elseif (delta < 0) then
-      oq.log( true, OQ.LOST .." ".. GetCoinTextureString(delta) .."    (".. GetCoinTextureString(rate) .." ".. OQ.PERHOUR ..")" ) ;
+      oq.log( true, OQ.LOST .." ".. GetCoinTextureString(abs(delta)) .."    (".. GetCoinTextureString(abs(rate)) .." ".. OQ.PERHOUR ..")" ) ;
     end
   end
     
@@ -3018,14 +3031,16 @@ function oq.check_currency()
   else
     oq.timer_oneshot( 10, oq.force_stats ) ; -- force stats to refresh 10 seconds after coming out
   end
-  
-  if (_last_report ~= nil) then
-    -- bgs only
-    oq.submit_report( _last_report, _last_tops, _last_bg, _last_crc, OQ_data.stats.bg_end ) ;
+
+  -- instance over  
+  if (oq._instance_end_tm) and (oq._instance_end_tm > 0) then
+    if (_last_report ~= nil) then
+      -- bgs only
+      oq.submit_report( _last_report, _last_tops, _last_bg, _last_crc, OQ_data.stats.bg_end ) ;
+    end
+    -- resetting data
+    oq._instance_type = nil ;
   end
-  
-  -- resetting data
-  oq._instance_type = nil ;
 end
 
 function oq.show_wallet()
@@ -3576,6 +3591,7 @@ function oq.check_bg_status()
     oq.timer( "threat_update", 2.5, nil ) ;
     oq.timer( "wipe_check"   , 5.0, nil ) ;
     oq.timer( "report_threat", 2.5, nil ) ;
+    oq.CLEU_world_mode() ;
     oq.utimer_frame():Hide() ; -- hide while not in the bgs
     oq.threat_frame():Hide() ; -- hide while not in the bgs
   end
@@ -6189,6 +6205,7 @@ function oq.bnfriends_relay( m, insure )
   tbl.clear( _tags ) ;
   tbl.clear( _realms ) ;
   local cnt = 1 ;
+  local i ;
   for i,v in pairs(OQ_data.bn_friends) do
     if (v.isOnline and v.oq_enabled and v.toonName and v.realm and (_realms[v.realm] == nil) and (v.realm ~= player_realm) and (v.realm ~= oq._sender_realm)) then
       _tags[cnt] = v ;
@@ -10250,7 +10267,7 @@ function oq.create_bounty_board( parent )
   
   -- death-match: horde 
   y = d:GetHeight() - 240 ;
-  x1 = x + 40 ;
+  local x1 = x + 40 ;
   d._horde_score_l = oq.label( d, x1, y, 90, OQ.BUTTON_SZ, OQ.FACTION_ICON["H"] .." Horde" ) ;
   d._horde_score_l:SetJustifyV( "MIDDLE" ) ;
   d._horde_score_l:SetJustifyH( "LEFT" ) ;
@@ -12650,6 +12667,85 @@ function oq.sort_waitlist( col )
   oq.reshuffle_waitlist() ;
 end
 
+--
+-- invite all from the raid browser list
+-- ie: invite_all_solos(768) ;  -- invite all celestial solos
+--
+-- 768  mop world/ celestials
+-- 767  mop world/ ordos
+-- 771  mop flex/ vale of eternal blossoms
+-- 772  mop flex/ gates of retribution
+-- 773  mop flex/ the underhold
+-- 774  mop flex/ downhill
+-- 533  mop 10/ heart of fear
+-- 531  mop 10/ mogu'shan vaults
+-- 714  mop 10/ siege of orgrimmar
+-- 535  mop 10/ terrace of endless spring
+-- 633  mop 10/ throne of thunder
+-- 534  mop 25/ heart of fear
+-- 532  mop 25/ mogu'shan vaults
+-- 715  mop 25/ siege of orgrimmar
+-- 536  mop 25/ terrace of endless spring
+-- 634  mop 25/ throne of thunder
+-- 329  cata 25/ baradin hold
+-- 314  cata 25/ blackwing descent
+-- 448  cata 25/ dragon soul
+-- 362  cata 25/ firelands
+-- 316  cata 25/ the bastion of twilight
+-- 318  cata 25/ throne of the four winds
+-- 328  cata 10/ baradin hold
+-- 313  cata 10/ blackwing descent
+-- 447  cata 10/ dragon soul
+-- 361  cata 10/ firelands
+-- 315  cata 10/ the bastion of twilight
+-- 317  cata 10/ throne of the four winds
+-- 280  wotlk 25/ icecrown citadel
+-- 227  wotlk 25/ naxxramas
+-- 257  wotlk 25/ onyxia's lair
+-- 294  wotlk 25/ ruby sanctum
+-- 237  wotlk 25/ the eye of eternity
+-- 238  wotlk 25/ the obsidian sanctum
+-- 248  wotlk 25/ trial of the crusader
+-- 250  wotlk 25/ trial of the grand crusader
+-- 244  wotlk 25/ ulduar
+-- 240  wotlk 25/ vault of archavon
+-- 279  wotlk 10/ icecrown citadel
+-- 159  wotlk 10/ naxxramas
+-- 46   wotlk 10/ onyxia's lair
+-- 293  wotlk 10/ ruby sanctum
+-- 223  wotlk 10/ the eye of eternity
+-- 224  wotlk 10/ the obsidian sanctum
+-- 246  wotlk 10/ trial of the crusader
+-- 247  wotlk 10/ trial of the grand crusader
+-- 243  wotlk 10/ ulduar
+-- 239  wotlk 10/ vault of archavon
+-- 196  bc/ black temple
+-- 177  bc/ gruul's lair
+-- 195  bc/ hyjal past
+-- 175  bc/ karazhan
+-- 176  bc/ magtheridon's lair
+-- 194  bc/ serpentshrine cavern
+-- 193  bc/ tempest keep
+-- 199  bc/ the sunwell
+-- 160  classic/ ahn'qiraj ruins
+-- 161  classic/ ahn'qiraj temple
+-- 50   classic/ blackwing lair
+-- 48   classic/ molten core
+-- 358  rated bgs
+-- 
+local function invite_all_solos( raid_id )
+   SearchLFGJoin(LE_LFG_CATEGORY_LFR, raid_id ) ;
+   RefreshLFGList() ;
+   local nResults, tResults = SearchLFGGetNumResults() ;
+   
+   for i=1,nResults do
+      local name, level, areaName, className, comment, partyMembers, status, class, encountersTotal, encountersComplete, isLeader, isTank, isHealer, isDamage  = SearchLFGGetResults(i) ;
+      if (partyMembers == 0) and (name ~= "Unknown") then
+         InviteUnit( name ) ;
+      end
+   end
+end
+
 function oq.create_tab_waitlist()
   local x, y, cx, cy ;
   local parent = OQTabPage7 ;
@@ -12698,11 +12794,11 @@ function oq.create_tab_waitlist()
   oq.waitlist_nfriends = oq.label( parent, x, y, 150, cy, string.format( OQ.BNET_FRIENDS, 0 ) ) ; 
   oq.waitlist_nfriends:SetJustifyH("right") ;
 
-  x = 130 ;
-  f = oq.button2( parent, x, y-4, 110, 24, OQ.BUT_REMOVE_OFFLINE, 14, function(self) oq.remove_offline_members() ; end ) ;
+  x = 120 ;
+  f = oq.button2( parent, x, y-4, 100, 24, OQ.BUT_REMOVE_OFFLINE, 14, function(self) oq.remove_offline_members() ; end ) ;
   f.string:SetFont(OQ.FONT, 10, "") ;
   oq.remove_all_offline_button = f ;
-
+  
   -- add samples
   oq.tab7_waitlist = tbl.new() ;
 
@@ -17412,9 +17508,6 @@ function oq.verify_version( proto_version, oq_version )
   oq._update_required = (proto_version ~= OQ_VER) ;
   -- update ui component to reflect new version
   if (oq._update_required) then
---    oq.version_marquee.line_2:SetText( OQ.DLG_18b ) ;
---    oq.version_marquee:SetHeight(65) ;
---    oq.version_marquee.line_2:Show() ;
     oq._major = major ;
     oq._minor = minor ;
     oq._rev   = rev ;
@@ -20670,6 +20763,9 @@ function oq.set_bn_msg_clear()
 end
 
 function oq.init_bn_custom_msg()
+  if (OQ_toon.disabled == true) then
+    return ;
+  end
   if (BNSetCustomMessage ~= nil) and (oq.old_bncustommsg ~= BNSetCustomMessage) then
     oq.old_bncustommsg = BNSetCustomMessage ;
     BNSetCustomMessage = oq.BNSetCustomMessage ;
@@ -20715,16 +20811,29 @@ function oq.toggle_autoinspect( cb )
   end 
 end
 
+function oq.turnon_CLEU_ifneeded()
+  if (oq._instance_type == "pvp") and (oq._inside_instance == 1) and ((OQ_toon.who_popped_lust == 1) or (OQ_toon.say_sapped == 1) or (OQ_toon.shout_kbs == 1)) then
+    oq.ui:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED") ;
+  else
+    oq.CLEU_world_mode() ;
+  end
+end
+
+function oq.CLEU_world_mode()
+  if (OQ_toon.say_sapped == 1) then
+    oq.ui:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED") ;
+  else
+    oq.ui:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED") ;
+  end
+end
+
 function oq.toggle_shout_kbs( cb )
   if (cb:GetChecked()) then 
     OQ_toon.shout_kbs = 1 ; 
-    oq.ui:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED") ;    
   else 
     OQ_toon.shout_kbs = 0 ; 
-    if (OQ_toon.who_popped_lust == 0) and (OQ_toon.say_sapped == 0) and (OQ_toon.shout_kbs == 0) then
-      oq.ui:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED") ;
-    end
   end 
+  oq.turnon_CLEU_ifneeded() ;
 end
 
 function oq.toggle_premade_ads( cb )
@@ -20748,25 +20857,19 @@ end
 function oq.toggle_say_sapped( cb )
   if (cb:GetChecked()) then 
     OQ_toon.say_sapped = 1 ; 
-    oq.ui:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED") ;    
   else 
     OQ_toon.say_sapped = 0 ; 
-    if (OQ_toon.who_popped_lust == 0) and (OQ_toon.say_sapped == 0) and (OQ_toon.shout_kbs == 0) then
-      oq.ui:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED") ;
-    end
   end 
+  oq.turnon_CLEU_ifneeded() ;
 end
 
 function oq.toggle_who_popped_lust( cb )
   if (cb:GetChecked()) then 
     OQ_toon.who_popped_lust = 1 ; 
-    oq.ui:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED") ;    
   else 
     OQ_toon.who_popped_lust = 0 ; 
-    if (OQ_toon.who_popped_lust == 0) and (OQ_toon.say_sapped == 0) and (OQ_toon.shout_kbs == 0) then
-      oq.ui:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED") ;
-    end
   end 
+  oq.turnon_CLEU_ifneeded() ;
 end
 
 function oq.toggle_premade_qualified(cb)
@@ -21230,7 +21333,7 @@ function oq.register_events()
   oq.ui:RegisterEvent("CHAT_MSG_PARTY") ;
   oq.ui:RegisterEvent("CHAT_MSG_PARTY_LEADER") ;
   oq.ui:RegisterEvent("CLOSE_WORLD_MAP") ;
-  oq.ui:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED") ;
+--  oq.ui:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED") ;
 --  oq.ui:RegisterEvent("COMBAT_LOG_EVENT") ;
   oq.ui:RegisterEvent("LFG_COMPLETION_REWARD") ;
   oq.ui:RegisterEvent("INSPECT_READY") ;
@@ -21316,7 +21419,7 @@ function oq.player_new_level()
 end
 
 function oq.init_locals()
-  oq.random = fastrandom or random ;
+  oq.random = fastrandom ; -- or random ;
   oq.nwaitlist = 0 ;
   oq.nlistings = 0 ;
   oq.old_raids = tbl.new() ;
@@ -21393,7 +21496,7 @@ OQ.btag_hyperlink = { { text = OQ.TT_KARMA ..":  ".. OQ.karma_up .."  ".. OQ.UP 
                       { text = OQ.TT_FRIEND_REQUEST, action = "friend" },
                     } ;
 
-function oq.onHyperlink_btag( link, text, button )
+function oq.onHyperlink_btag( link )
   local n1 = link:find( ":" ) or 0 ;
   local n2 = link:find( ":", n1+1 ) or -1 ;
   local token = link:sub( n1 + 1, n2 - 1 ) ;
@@ -21425,7 +21528,7 @@ function oq.onHyperlink_btag( link, text, button )
   oq.menu_show_at_cursor( 150, -20, 0 ) ;  
 end
 
-function oq.onHyperlink_log( link, text, button )
+function oq.onHyperlink_log( link )
   local n = link:find( ":" ) or 0 ;
   local token = link:sub( n + 1, -1 ) ;
   if (token == nil) then
@@ -21434,7 +21537,7 @@ function oq.onHyperlink_log( link, text, button )
 --print( "log hyperlink: [".. tostring(token) .."] L[".. tostring(link) .."]" ) ; 
 end
 
-function oq.onHyperlink_contract( link, text, button )
+function oq.onHyperlink_contract( link )
   local n = link:find( ":" ) or 0 ;
   local token = link:sub( n+1, -1 ) ;
   if (token == nil) then
@@ -21457,7 +21560,7 @@ OQ.premade_hyperlink = { { text = OQ.WAITLIST   , action = "waitlist" },
                          { text = "---"         , action = ""         },
                          { text = OQ.DD_BAN     , action = "ban"      },
                     } ;
-function oq.onHyperlink_oqueue( link, text, button )
+function oq.onHyperlink_oqueue( link )
   local token = link:sub( link:find( ":" ) +1, -1 ) ;
   if (token == nil) then
     return ;
@@ -21491,22 +21594,48 @@ function oq.onHyperlink_oqueue( link, text, button )
   oq.menu_show_at_cursor( 150, -20, 0 ) ;  
 end
 
-local _old_hyperlink_handler = nil ;
-function OQ_onHyperlinkClick( self, link, ... )
-  local n = link:find( ":" ) or 0 ;
-  local service = link:sub( 1, n - 1 ) ;
-  if (oq._hyperlinks[service]) then
-    oq._hyperlinks[service]( link, ... ) ;
-  else
-    if (_old_hyperlink_handler) then
-      _old_hyperlink_handler( self, link, ... ) ;
+--[[ this works:
+/run oldf=ChatFrame1:GetScript("OnHyperLinkClick") ChatFrame1:SetScript("OnHyperLinkClick", function(...) print(".") ; oldf(...) end);
+]]--
+
+--local _old_hyperlink_handler = nil ;
+function OQ_hook_chat()
+--  _old_hyperlink_handler = ChatFrame1:GetScript("OnHyperLinkClick") ;
+--  ChatFrame1:SetScript("OnHyperLinkClick", function(...) 
+--[[
+    local link = select(2, ...) ;
+    if (link) then
+      local service = link:sub( 1, (link:find( ":" ) or 0) - 1 ) ;
+      if (oq._hyperlinks[service]) then
+        oq._hyperlinks[service]( ... ) ;
+      elseif (_old_hyperlink_handler) then
+        _old_hyperlink_handler( ... ) ;
+      end
+    else
+      _old_hyperlink_handler( ... ) ;
     end
-  end
+]]--
+--print( "+" ) ;
+--      _old_hyperlink_handler( ... ) ;
+--  end
+--  ) ;
 end
 
-function oq.hook_chat_hyperlink()
-  _old_hyperlink_handler = ChatFrame1:GetScript("OnHyperLinkClick") ;
-  ChatFrame1:SetScript("OnHyperLinkClick", OQ_onHyperlinkClick ) ;
+local _old_sethyperlink_handler = ItemRefTooltip.SetHyperlink ;
+function ItemRefTooltip:SetHyperlink(link)
+  if (oq._hyperlinks[link:sub( 1, (link:find( ":" ) or 0) - 1 )]) then
+    oq._hyperlinks[link:sub( 1, (link:find( ":" ) or 0) - 1 )]( link ) ;
+  elseif (_old_sethyperlink_handler) then
+    _old_sethyperlink_handler(link)
+  end
+--[[
+  local service = link:sub( 1, (link:find( ":" ) or 0) - 1 ) ;
+  if (oq._hyperlinks[service]) then
+    oq._hyperlinks[service]( link ) ;
+  elseif (_old_sethyperlink_handler) then
+    _old_sethyperlink_handler(link)
+  end
+]]--
 end
 
 function oq.get_player_faction()
@@ -22186,7 +22315,6 @@ function oq.on_init( now )
   oq.timer_oneshot(  5, oq.delayed_button_load         ) ;
   oq.timer_oneshot(  6, Register_Logout_Prehook        ) ;
   oq.timer_oneshot(  7, oq.init_bn_custom_msg          ) ;
-  oq.timer_oneshot(  9, oq.hook_chat_hyperlink         ) ;
   oq.timer_oneshot( 10, oq.bump_scorekeeper            ) ;
   
   if (OQ_data._helper_intro_shown == nil) then
@@ -22730,8 +22858,7 @@ function oq.ui_toggle()
       oq.channel_join( "OQGeneral" ) ;  -- just in case
     end
     if (OQ_toon.disabled) then
-      OQ_toon.disabled = nil ;    
-      print( OQ.ENABLED ) ;
+      oq.oq_on() ;
     end
     if (OQ_data._helper_intro_shown == nil) then
       oq.req_karma( "player" ) ;

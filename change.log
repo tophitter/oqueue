@@ -1,5 +1,10 @@
 ﻿change.log for oQueue
 
+v1.7.1  BUGFIX: would break wallet income calc upon exiting dungeon on toon with no hks
+        BUGFIX: GetCoinTextureString of negative values would break; fixed
+        UPD: trimmed cleu to only register if required; ie: in pvp instance or in the world & say-sapped enabled
+        UPD: going dark will also survive reload and will adjust cleu requirements as well
+
 v1.7.0  BUGFIX: was sending too many packets/sec; placed msgs on queue to throttle/restrict/drop
 
 v1.6.9  ** mandatory update **    (blizz api changes and oqueue protocol updates)
