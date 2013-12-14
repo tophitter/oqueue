@@ -74,7 +74,7 @@ OQ.rank_breaks = { ["pvp"  ] = { [1] = { r = "knight" , line =    100, rank = 1 
                                  [3] = { r = "silver" , line =    750, rank = 3 }, -- about 1000-1500 rbgs
                                  [4] = { r = "golden" , line =   2000, rank = 4 }, --
                                },
-                   ["pve"  ] = { [1] = { r = "knight" , line =    600, rank = 1 }, -- roughly 4 pts per instance, 5 instances per hour plus 300 pts for heroic 25mans per week
+                   ["pve"  ] = { [1] = { r = "knight" , line =    400, rank = 1 }, -- roughly 4 pts per instance, 5 instances per hour, about 20 hrs
                                  [2] = { r = "general", line =   2250, rank = 2 }, 
                                  [3] = { r = "silver" , line =   5000, rank = 3 },
                                  [4] = { r = "golden" , line =  12500, rank = 4 },
@@ -87,14 +87,15 @@ OQ._difficulty = { [ 1] = { n =0.25, desc = "5 player"           },
                    [ 2] = { n =   1, desc = "5 player (heroic)"  },
                    [ 3] = { n =   4, desc = "10 player" },
                    [ 4] = { n =   8, desc = "25 player" },
-                   [ 5] = { n =   6, desc = "10 player (heroic)" },
+                   [ 5] = { n =   8, desc = "10 player (heroic)" },
                    [ 6] = { n =  10, desc = "25 player (heroic)" },
-                   [ 7] = { n =   0, desc = "LFR" },
+                   [ 7] = { n =   2, desc = "LFR" },
                    [ 8] = { n =   3, desc = "challenge mode" },
                    [ 9] = { n =   0, desc = "40 player" },
                    [10] = { n =   0, desc = "-" },
                    [11] = { n =   2, desc = "scenario (heroic)" },
                    [12] = { n =   1, desc = "scenario" },
+                   [14] = { n =   3, desc = "flex raid" },
                  } ;
                  
 function oq.has_completed( achieve_id )
@@ -535,11 +536,11 @@ function oq.get_dragon_rank( type, nwins, leader_xp )
       if (OQ.rank_breaks[t][i]) and (nwins >= OQ.rank_breaks[t][i].line) then
         rank  = OQ.rank_breaks[t][i].rank ;
         title = OQ.rank_breaks[t][i].r ;
-        return OQ.dragon_rank[ rank ].tag, OQ.dragon_rank[ rank ].y, OQ.dragon_rank[ rank ].cx, OQ.dragon_rank[ rank ].cy, title ;
+        return OQ.dragon_rank[ rank ].tag, OQ.dragon_rank[ rank ].y, OQ.dragon_rank[ rank ].cx, OQ.dragon_rank[ rank ].cy, title, rank ;
       end
     end
   end
-  return nil, 0, 0, 0, "" ;
+  return nil, 0, 0, 0, "", 0 ;
 end
 
 function oq.get_winloss_record( leader_xp )

@@ -1,7 +1,13 @@
 ﻿change.log for oQueue
 
+v1.7.2  BUGFIX: various bug droppings
+        BUGFIX: leadership rank for pve shown on tooltip
+        BUGFIX: detecting boss kills better
+        add: flex boss kills will now reward dkp
+
 v1.7.1  BUGFIX: would break wallet income calc upon exiting dungeon on toon with no hks
         BUGFIX: GetCoinTextureString of negative values would break; fixed
+        BUGFIX: btags insure unique in find-premade list
         UPD: trimmed cleu to only register if required; ie: in pvp instance or in the world & say-sapped enabled
         UPD: going dark will also survive reload and will adjust cleu requirements as well
 

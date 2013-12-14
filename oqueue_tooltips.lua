@@ -746,6 +746,7 @@ function oq.pm_tooltip_set( f, raid_token )
   local back_set = oq.premade_vip_check( pm_tooltip, raid_token, true ) ;
   local nWins = 0 ;
   local nLosses = 0 ;
+  local rank = 0 ;
 
   pm_tooltip.left [ 1]:SetText( raid.name ) ;
   pm_tooltip.right[ 1]:SetText( oq.get_rank_icons( raid.leader_xp:sub(10,-1) ) ) ;
@@ -775,7 +776,8 @@ function oq.pm_tooltip_set( f, raid_token )
   if (raid.type == OQ.TYPE_BG) or (raid.type == OQ.TYPE_RBG) then
     pm_tooltip.left [ 7]:SetText( OQ.TT_RECORD ) ;
     nWins, nLosses = oq.get_winloss_record( raid.leader_xp ) ;
-    local tag, y, cx, cy = oq.get_dragon_rank( raid.type, nWins or 0 ) ;  
+    local tag, y, cx, cy, title, r1 = oq.get_dragon_rank( raid.type, nWins or 0 ) ;  
+    rank = r1 ;
     if (tag) then
       if (y == 0) then
         pm_tooltip.right[ 7]:SetText( "|T".. tag ..":32:32|t ".. nWins .." - ".. nLosses ) ;
@@ -791,7 +793,8 @@ function oq.pm_tooltip_set( f, raid_token )
     local nWins   = oq.decode_mime64_digits(raid.leader_xp:sub(1,3)) ;
     local nLosses = oq.decode_mime64_digits(raid.leader_xp:sub(4,5)) ;
     local dkp     = oq.decode_mime64_digits(raid.leader_xp:sub(6,8)) ;
-    local tag, y, cx, cy, title = oq.get_dragon_rank( raid.type, dkp ) ;  
+    local tag, y, cx, cy, title, r1 = oq.get_dragon_rank( raid.type, dkp ) ;  
+    rank = r1 ;
     
     pm_tooltip.left [ 7]:SetText( OQ.TT_PVERECORD ) ;
     pm_tooltip.right[ 7]:SetText( nWins .." - ".. nLosses ) ;
@@ -809,8 +812,9 @@ function oq.pm_tooltip_set( f, raid_token )
   elseif (raid.type == OQ.TYPE_CHALLENGE) then
     nWins, nLosses = oq.get_challenge_winloss_record( raid.leader_xp ) ;
     local dkp            = oq.decode_mime64_digits(raid.leader_xp:sub(12,14)) ;
-    local tag, y, cx, cy = oq.get_dragon_rank( raid.type, dkp or 0 ) ;  
-    
+    local tag, y, cx, cy, title, r1 = oq.get_dragon_rank( raid.type, dkp or 0 ) ;  
+    rank = r1 ;
+
     pm_tooltip.left [ 7]:SetText( OQ.TT_PVERECORD ) ;
     pm_tooltip.right[ 7]:SetText( nWins .." - ".. nLosses ) ;
     pm_tooltip.left [ 8]:SetText( OQ.TT_DKP ) ;
@@ -847,7 +851,8 @@ function oq.pm_tooltip_set( f, raid_token )
   elseif (raid.type == OQ.TYPE_RAID) or (raid.type == OQ.TYPE_DUNGEON) then
     nWins, nLosses = oq.get_pve_winloss_record( raid.leader_xp ) ;
     local dkp            = oq.decode_mime64_digits(raid.leader_xp:sub(17,19)) ;
-    local tag, y, cx, cy = oq.get_dragon_rank( raid.type, dkp or 0 ) ;  
+    local tag, y, cx, cy, title, r1 = oq.get_dragon_rank( raid.type, dkp or 0 ) ;  
+    rank = r1 ;
 
     pm_tooltip.left [ 7]:SetText( OQ.TT_PVERECORD ) ;
     pm_tooltip.right[ 7]:SetText( nWins .." - ".. nLosses ) ;
@@ -883,19 +888,23 @@ function oq.pm_tooltip_set( f, raid_token )
   end
 
   -- set dragon
-  if (nWins >= 5000) and (back_set ~= true) then
+  oq.pm_tooltip_set_background_dragon(rank, oq._player_faction, back_set) ;
+  
+  pm_tooltip:Show() ;
+end
+
+function oq.pm_tooltip_set_background_dragon(rank, faction, back_set)
+  if (rank == 4) and (back_set ~= true) then
     oq.vip_set_dragon( pm_tooltip, "golden-dragon" ) ;
-  elseif (nWins >= 1000) and (back_set ~= true) then
+  elseif (rank == 3) and (back_set ~= true) then
     oq.vip_set_dragon( pm_tooltip, "dragon" ) ;
-  elseif (nWins >= 500) and (back_set ~= true) then
+  elseif (rank == 2) and (back_set ~= true) then
     oq.vip_set_dragon( pm_tooltip, "general-".. oq._player_faction ) ;
-  elseif (nWins >= 100) and (back_set ~= true) then
+  elseif (rank == 1) and (back_set ~= true) then
     oq.vip_set_dragon( pm_tooltip, "knight-".. oq._player_faction ) ;
   elseif (back_set ~= true) then
     oq.vip_clear( pm_tooltip ) ;
   end
-  
-  pm_tooltip:Show() ;
 end
 
 function oq.pm_tooltip_show()

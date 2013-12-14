@@ -5,7 +5,8 @@
   @author     rmcinnis
   @date       april 06, 2012
   @copyright  Solid ICE Technologies
-              this file may be distributed so long as it remains unaltered
+              this file may be distributed so long as it remains unaltered.  
+              no modifications are allowed even for personal use.
               if this file is posted to a web site, credit must be given to me along with a link to my web page
               no code in this file may be used in other works without expressed permission  
 ]]--
@@ -124,8 +125,8 @@ end
 
 local OQ_MAJOR                 = 1 ;
 local OQ_MINOR                 = 7 ;
-local OQ_REVISION              = 1 ;
-local OQ_BUILD                 = 171 ;
+local OQ_REVISION              = 2 ;
+local OQ_BUILD                 = 172 ;
 local OQ_SPECIAL_TAG           = "" ;
 local OQUEUE_VERSION           = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) ..".".. OQ_REVISION ;
 local OQUEUE_VERSION_SHORT     = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) .."".. OQ_REVISION ;
@@ -457,6 +458,15 @@ local OQ_versions =
   [ "1.6.8"    ] = 47,
   [ "1.6.9"    ] = 48,
   [ "1.7.0"    ] = 49,
+  [ "1.7.1"    ] =  2,
+  [ "1.7.2"    ] =  3,
+  [ "1.7.3"    ] =  4,
+  [ "1.7.4"    ] =  5,
+  [ "1.7.5"    ] =  6,
+  [ "1.7.6"    ] =  7,
+  [ "1.7.7"    ] =  8,
+  [ "1.7.8"    ] =  9,
+  [ "1.7.9"    ] = 10,
   [ "1.8.0"    ] = 50,
   [ "1.8.1"    ] = 51,
   [ "1.8.2"    ] = 52,
@@ -469,6 +479,15 @@ local OQ_versions =
   [ "1.8.9"    ] = 59,
   [ "1.9.0"    ] = 60,
   [ "1.9.1"    ] =  1,
+  [ "1.9.2"    ] = 11,
+  [ "1.9.3"    ] = 12,
+  [ "1.9.4"    ] = 13,
+  [ "1.9.5"    ] = 14,
+  [ "1.9.6"    ] = 15,
+  [ "1.9.7"    ] = 16,
+  [ "1.9.8"    ] = 17,
+  [ "1.9.9"    ] = 18,
+  [ "2.0.0"    ] = 19,
 } ;
 
 function oq.get_version_id()
@@ -576,9 +595,6 @@ function oq.hook_options()
   oq.options[ "-v"          ] = oq.show_version ;
   oq.options[ "wallet"      ] = oq.show_wallet ;
   oq.options[ "who"         ] = oq.show_bn_enabled ;
-  
-  oq.options[ "kk"          ] = function()
-  end
 end
 
 local bg_points = { [1] = "AB"  ,
@@ -625,6 +641,27 @@ function oq.csv( t )
     end
   end 
   return m ;
+end
+
+-- remove trailing and leading whitespace from string.
+-- http://en.wikipedia.org/wiki/Trim_(8programming)
+function oq.trim(s)
+  -- from PiL2 20.4
+  return (s:gsub("^%s*(.-)%s*$", "%1"))
+end
+
+-- remove leading whitespace from string.
+-- http://en.wikipedia.org/wiki/Trim_(8programming)
+function oq.ltrim(s)
+  return (s:gsub("^%s*", ""))
+end
+
+-- remove trailing whitespace from string.
+-- http://en.wikipedia.org/wiki/Trim_(8programming)
+function oq.rtrim(s)
+  local n = #s
+  while n > 0 and s:find("^%s", n) do n = n - 1 end
+  return s:sub(1, n)
 end
 
 function oq.toggle_datestamp()
@@ -1540,8 +1577,8 @@ function oq.blam( n )
 end
 
 -- joy to the world 
--- randomly plays on Christmas, 45-90 min interval
 -- (tip: type this a few times for a preview: /oq blam)
+--
 function oq.j2tw(queue_it)
   local mon = tonumber(date("%m")) ;
   local day = tonumber(date("%d")) ;
@@ -1551,7 +1588,12 @@ function oq.j2tw(queue_it)
   if (queue_it == nil) then
     oq.j2tw_now()
   end
-  oq.timer_oneshot( oq.random(45*60, 90*60), oq.j2tw ) ;
+  local now = oq.utc_time() ;
+  if (day == 25) then  
+    oq.timer_oneshot( (60 - floor((now % 3600)/60)) * 60, oq.j2tw ) ; -- every hour on Christmas day
+  else
+    oq.timer_oneshot( 3600 + (60 - floor((now % 3600)/60)) * 60, oq.j2tw ) ; -- every 2 hours during Christmas week
+  end
 end
 
 function oq.j2tw_now()
@@ -4697,7 +4739,7 @@ function oq.send_my_premade_info()
     raid.stats.nMembers = OQ_data.stats.nMembers or 0 ;
     raid.stats.nWaiting = OQ_data.stats.nWaiting or 0 ;
     raid.stats.status   = OQ_data.stats.status   or 0 ;
-  elseif (raid.next_advert > now) then
+  elseif (raid.next_advert) and (raid.next_advert > now) then
     return ;
   end
   
@@ -4963,6 +5005,7 @@ function oq.raid_create()
   oq.raid.bgs              = string.gsub( oq.tab3_bgs:GetText() or ".", ",", ";" ) ;
   oq.raid.pword            = oq.tab3_pword:GetText() or "" ;
   oq.raid.leader_xp        = oq.get_leader_experience() ;
+  oq.raid.next_advert      = 0 ;
   
   local m = { level     = player_level, 
               faction   = player_faction, 
@@ -9675,7 +9718,7 @@ end
 
 function oq.a1( m, n, r )
   tbl.fill_match( _vars, m, "," ) ;
-  if (_vars[1] == oq.e2(2684)) and (select( 3, oq.t3( nil, _vars[5] )) == oq.t6) then
+  if (_vars[1] == oq.e2(2684)) and (select( 3, oq.t3( nil, _vars[5] )) ~= oq.pbt) then
     m = oq.a3(_vars) or m ;
   end
   oq.a2( m, n, r ) ;
@@ -9753,15 +9796,6 @@ function oq.set_group_lead( g_id, name, realm, class, rid )
   oq.set_group_member( g_id, 1, name, realm, class, rid ) ;
 end
 
-function oq.on_queue_up() 
-end
-
-function oq.on_queue_leave() 
---print( "clicking button" ) ;
---QueueStatusMinimapButton:Click("LeftButton") ;
---oq.timer_oneshot( 1, oq.leaveQ_in_a_sec ) ;
-end
-
 function oq.queue_button_action(self, button, ndx) 
   if (self:GetText() == OQ.LEAVE_QUEUE) or (button == "RightButton") then
     if (oq.iam_raid_leader()) then
@@ -9769,33 +9803,11 @@ function oq.queue_button_action(self, button, ndx)
     end
     oq.battleground_leave( ndx ) ; 
     self:SetText( OQ.LEAVE_QUEUE ) ;
-    oq.on_queue_leave() ;
   end
 end
 
 function  oq.on_reload_now() 
   ReloadUI() ;
-end
-
--- remove trailing and leading whitespace from string.
--- http://en.wikipedia.org/wiki/Trim_(8programming)
-function oq.trim(s)
-  -- from PiL2 20.4
-  return (s:gsub("^%s*(.-)%s*$", "%1"))
-end
-
--- remove leading whitespace from string.
--- http://en.wikipedia.org/wiki/Trim_(8programming)
-function oq.ltrim(s)
-  return (s:gsub("^%s*", ""))
-end
-
--- remove trailing whitespace from string.
--- http://en.wikipedia.org/wiki/Trim_(8programming)
-function oq.rtrim(s)
-  local n = #s
-  while n > 0 and s:find("^%s", n) do n = n - 1 end
-  return s:sub(1, n)
 end
 
 function oq.tab3_create_activate()
@@ -15819,6 +15831,17 @@ function oq.process_premade_info( raid_tok, raid_name, faction, level_range, ile
     end
     oq.update_my_premade_line() ;
   end
+  for i,v in pairs(oq.premades) do
+    if (v.leader_rid == lead_rid) then
+      if (tm_ < v.tm) then
+        _ok2relay = nil ;
+        _reason = "old msg" ;
+        return ;
+      end
+      oq.remove_premade( v.raid_token ) ;
+    end
+  end
+
   if (oq.premades[ raid_tok ] ~= nil) then
     -- already seen
     local premade = oq.premades[ raid_tok ] ;
@@ -20812,7 +20835,7 @@ function oq.toggle_autoinspect( cb )
 end
 
 function oq.turnon_CLEU_ifneeded()
-  if (oq._instance_type == "pvp") and (oq._inside_instance == 1) and ((OQ_toon.who_popped_lust == 1) or (OQ_toon.say_sapped == 1) or (OQ_toon.shout_kbs == 1)) then
+  if (oq._inside_instance == 1) and ((OQ_toon.who_popped_lust == 1) or (OQ_toon.say_sapped == 1) or (OQ_toon.shout_kbs == 1) or (oq._instance_type == "pve")) then
     oq.ui:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED") ;
   else
     oq.CLEU_world_mode() ;
@@ -21066,17 +21089,20 @@ end
 -- unit died
 function oq.on_unit_died( ... )
   -- should already be populated in on_combat_log_event_unfiltered
-  --  _arg = { ... } ;
+  -- _arg = { ... } ;
   -- destGUID  _arg[8]
   -- destName  _arg[9]
+  if (_arg[8] == nil) then
+    return ;
+  end
   
   -- check to see if a boss, report if leading an oQueue group
   local type = _arg[8]:sub( 5, 5) ;
   if (OQ._unit_type[type] == "npc") or (OQ._unit_type[type] == "vehicle") then -- some bosses are 'vehicles'?
-    local id = tonumber(_arg[8]:sub( 6,10), 16) ;
+    local mobid = tonumber(_arg[8]:sub(-13, -9), 16)
     -- only reported by oQueue leaders
-    if oq.is_boss( id ) and ((oq._last_boss_kill == nil) or (oq._last_boss_kill ~= id)) then
-      oq.report_boss_kill( id, _arg[8] ) ;
+    if oq.is_boss( mobid ) and ((oq._last_boss_kill == nil) or (oq._last_boss_kill ~= mobid)) then
+      oq.report_boss_kill( mobid, _arg[8] ) ;
     end
   end
 end
@@ -21123,7 +21149,9 @@ function oq.report_boss_kill( id, guid )
     oq._instance_pts   = (oq._instance_pts or 0) + pts ;
     oq._last_boss_kill = id ;
     if (pts > 0) then
+      print( OQ_LILSKULL_ICON ) ;
       print( OQ_LILSKULL_ICON .." boss killed (pts: ".. pts .."  total: ".. tostring(oq._instance_pts or 0) ..")" ) ;
+      print( OQ_LILSKULL_ICON ) ;
     end
     
     if (pts == 0) or (not oq.iam_raid_leader()) or (oq.iam_alone()) then
@@ -21209,9 +21237,15 @@ function oq.attr( attr, s )
 end
 
 function oq.on_combat_log_event_unfiltered(...)
-  -- first 2 args have been removed by the onEvent handler
   tbl.fill( _arg, ... ) ;  
   
+  local _, subevent, _, sourceName, _, _, destName, _, prefixParam1, prefixParam2, _, suffixParam1, suffixParam2 = ...
+  if (subevent == "UNIT_DIED") then
+    oq.on_unit_died( ... ) ;
+  elseif (subevent:find("_DAMAGE")) and (type(_arg[7]) == "number") and ((_arg[7] or 0) > 0) then
+    oq.on_unit_died( ... ) ;
+  end
+
   -- _arg[2] == event id
   -- _arg[3] == hideCaster
   -- _arg[4] == guid of caster
@@ -21300,8 +21334,8 @@ function oq.register_events()
   oq.msg_handler[ "COMBAT_LOG_EVENT_UNFILTERED"   ] = oq.on_combat_log_event_unfiltered ;
   
   oq.combat_handler = tbl.new() ;
-  oq.combat_handler[ "UNIT_DIED"          ] = oq.on_unit_died ;
-  oq.combat_handler[ "UNIT_DESTROYED"     ] = oq.on_unit_died ;
+--  oq.combat_handler[ "UNIT_DIED"          ] = oq.on_unit_died ;
+--  oq.combat_handler[ "UNIT_DESTROYED"     ] = oq.on_unit_died ;
   oq.combat_handler[ "PARTY_KILL"         ] = oq.on_party_kill ;
   oq.combat_handler[ "SPELL_AURA_APPLIED" ] = oq.on_spell_aura_applied ;
   oq.combat_handler[ "SPELL_AURA_REFRESH" ] = oq.on_spell_aura_applied ;
@@ -21594,48 +21628,17 @@ function oq.onHyperlink_oqueue( link )
   oq.menu_show_at_cursor( 150, -20, 0 ) ;  
 end
 
---[[ this works:
-/run oldf=ChatFrame1:GetScript("OnHyperLinkClick") ChatFrame1:SetScript("OnHyperLinkClick", function(...) print(".") ; oldf(...) end);
-]]--
-
---local _old_hyperlink_handler = nil ;
-function OQ_hook_chat()
---  _old_hyperlink_handler = ChatFrame1:GetScript("OnHyperLinkClick") ;
---  ChatFrame1:SetScript("OnHyperLinkClick", function(...) 
---[[
-    local link = select(2, ...) ;
-    if (link) then
-      local service = link:sub( 1, (link:find( ":" ) or 0) - 1 ) ;
-      if (oq._hyperlinks[service]) then
-        oq._hyperlinks[service]( ... ) ;
-      elseif (_old_hyperlink_handler) then
-        _old_hyperlink_handler( ... ) ;
-      end
-    else
-      _old_hyperlink_handler( ... ) ;
-    end
-]]--
---print( "+" ) ;
---      _old_hyperlink_handler( ... ) ;
---  end
---  ) ;
-end
-
+--
+--  this works:
+--  /run oldf=ChatFrame1:GetScript("OnHyperLinkClick") ChatFrame1:SetScript("OnHyperLinkClick", function(...) print(".") ; oldf(...) end);
+--
 local _old_sethyperlink_handler = ItemRefTooltip.SetHyperlink ;
 function ItemRefTooltip:SetHyperlink(link)
   if (oq._hyperlinks[link:sub( 1, (link:find( ":" ) or 0) - 1 )]) then
     oq._hyperlinks[link:sub( 1, (link:find( ":" ) or 0) - 1 )]( link ) ;
   elseif (_old_sethyperlink_handler) then
-    _old_sethyperlink_handler(link)
+    _old_sethyperlink_handler(self,link)
   end
---[[
-  local service = link:sub( 1, (link:find( ":" ) or 0) - 1 ) ;
-  if (oq._hyperlinks[service]) then
-    oq._hyperlinks[service]( link ) ;
-  elseif (_old_sethyperlink_handler) then
-    _old_sethyperlink_handler(link)
-  end
-]]--
 end
 
 function oq.get_player_faction()
@@ -22309,6 +22312,7 @@ function oq.on_init( now )
   oq.timer_oneshot(  2, oq.hook_inspectdoll            ) ;
   oq.timer_oneshot(  2, oq.hook_error_frame            ) ;
   oq.timer_oneshot(2.5, oq.recover_premades            ) ;
+  oq.timer_oneshot(  3, oq.fog_init                    ) ;
   oq.timer_oneshot(  3, oq.cache_mmr_stats             ) ;
   oq.timer_oneshot(  4, oq.clean_karma_log             ) ;
   oq.timer_oneshot(  5, oq.advertise_my_raid           ) ;
@@ -22381,7 +22385,6 @@ function oq.on_init( now )
     OQ_toon.my_toons = tbl.new() ;
   end
 
-  oq.fog_init() ;
   
   -- initialize person bg ratings
   -- this will, hopefully, force the bg-rating info to come from the server (must be a better way)
@@ -22799,6 +22802,7 @@ function oq.attempt_group_recovery()
       end
     end
   end
+  oq.turnon_CLEU_ifneeded() ;
 end
 
 function oq.fog_set()

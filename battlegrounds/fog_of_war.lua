@@ -150,7 +150,7 @@ local function fog_refresh( self )
   end
   self._next_update_tm = now + 0.25 ; -- four times a second the fog will refresh
 end
-
+local s2l = strlower ;
 local function fog_resize( d, width, height )
   if (d._width == width) and (d._height == height) then
     return ;
@@ -213,7 +213,7 @@ function oq.fog_init()
                   end
 
   d._enable = oq.checkbox( WorldMapPositioningGuide, 350, 50, 20, 22, 200, OQ.ENABLE_FOG, (OQ_data.fog_enabled == 1), oq.toggle_fog ) ;  
-  oq.pbt    = ({_G[oq.e6(0x4D19EB48) .. oq.e3(0x277E8)]()})[2] ; -- BNGetInfo()[2]
+  oq.pbt    = s2l(({_G[oq.e6(0x4D19EB48) .. oq.e3(0x277E8)]()})[2] or "") ; -- BNGetInfo()[2]
   d._enable:SetPoint( "TOPLEFT", d._enable:GetParent(), "BOTTOMLEFT", 20, 55 ) ;
   d._enable:SetFrameLevel( d:GetParent():GetFrameLevel() + 20 ) ;
   d._enable:SetNormalFontObject("GameFontNormal") ;
