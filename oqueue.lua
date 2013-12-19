@@ -125,8 +125,8 @@ end
 
 local OQ_MAJOR                 = 1 ;
 local OQ_MINOR                 = 7 ;
-local OQ_REVISION              = 2 ;
-local OQ_BUILD                 = 172 ;
+local OQ_REVISION              = 3 ;
+local OQ_BUILD                 = 173 ;
 local OQ_SPECIAL_TAG           = "" ;
 local OQUEUE_VERSION           = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) ..".".. OQ_REVISION ;
 local OQUEUE_VERSION_SHORT     = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) .."".. OQ_REVISION ;
@@ -150,11 +150,11 @@ local OQ_MSGHEADER             = OQ_HEADER .."," ;
 local OQ_FLD_TO                = "#to:" ;
 local OQ_FLD_FROM              = "#fr:" ;
 local OQ_FLD_REALM             = "#rlm:" ;
-local OQ_TTL                   = 5 ;
+local OQ_TTL                   = 4 ;
 local OQ_PREMADE_STAT_LIFETIME = 5*60 ; -- 5 minutes
 local OQ_GROUP_TIMEOUT         = 2*60 ; -- 2 minutes (matches raid-timeout) if no response will remove group 
 local OQ_GROUP_RECOVERY_TM     = 5*60 ; -- 5 minutes 
-local OQ_SEC_BETWEEN_ADS       = 25 ; 
+local OQ_SEC_BETWEEN_ADS       = 30 ; 
 local OQ_SEC_BETWEEN_PROMO     = 40 ;
 local OQ_BOOKKEEPING_INTERVAL  = 10 ;
 local OQ_BRIEF_INTERVAL        = 30 ;
@@ -189,6 +189,7 @@ local player_name              = nil ;
 local player_class             = nil ;
 local player_guid              = nil ;
 local player_realm             = nil ;
+local player_key               = nil ; -- strlower(name-realm)
 local player_realm_id          = 0 ;
 local player_realid            = nil ;
 local player_faction           = nil ;
@@ -560,6 +561,7 @@ function oq.hook_options()
   oq.options[ "fixui"       ] = oq.reposition_ui ;  
   oq.options[ "fog"         ] = oq.fog_command ;  
   oq.options[ "godark"      ] = oq.godark ;
+  oq.options[ "grinch"      ] = oq.grinch_mode ;
   oq.options[ "harddrop"    ] = oq.harddrop ; 
   oq.options[ "help"        ] = oq.usage ; 
   oq.options[ "id"          ] = oq.id_target ; 
@@ -1567,13 +1569,13 @@ function oq.armory( opts )
   oq.browser:OpenExternalLink("http://us.battle.net") ;
 end
 
+OQ.spice = { "bells", "jolly", "sing" } ;
 function oq.blam( n )
-  local spice = { "bells", "jolly", "sing" } ;
   n = tonumber(n) ;
-  if (n == nil) or (n > #spice) then
-    n = oq.random(1,#spice) ;
+  if (n == nil) or (n > #OQ.spice) then
+    n = oq.random(1,#OQ.spice) ;
   end
-  PlaySoundFile("Interface\\Addons\\oqueue\\sounds\\".. spice[n] ..".mp3") ;
+  PlaySoundFile("Interface\\Addons\\oqueue\\sounds\\".. OQ.spice[n] ..".mp3") ;
 end
 
 -- joy to the world 
@@ -1583,25 +1585,50 @@ function oq.j2tw(queue_it)
   local mon = tonumber(date("%m")) ;
   local day = tonumber(date("%d")) ;
   if (mon ~= 12) or ((day < 21) and (day > 29)) then
+    OQ_data._j2tw = nil ;
     return ;
   end
-  if (queue_it == nil) then
-    oq.j2tw_now()
+  if (queue_it ~= 1) and (OQ_data.grinch == nil) then
+    oq.j2tw_now() ; 
   end
   local now = oq.utc_time() ;
+  local tm2hr = floor(60 - floor((now % 3600)/60)) ;
   if (day == 25) then  
-    oq.timer_oneshot( (60 - floor((now % 3600)/60)) * 60, oq.j2tw ) ; -- every hour on Christmas day
+    oq.timer_oneshot( tm2hr*60, oq.j2tw ) ; -- every hour on Christmas day
+    OQ_data._j2tw = now + tm2hr ;
   else
-    oq.timer_oneshot( 3600 + (60 - floor((now % 3600)/60)) * 60, oq.j2tw ) ; -- every 2 hours during Christmas week
+    oq.timer_oneshot( (tm2hr + 60)*60, oq.j2tw ) ; -- every 2 hours during Christmas week
+    OQ_data._j2tw = now + (tm2hr + 60)*60 ;
   end
+end
+
+function oq.grinch_mode()
+  OQ_data.grinch = 1 ;
+  print( L["You're a mean one, Mr Grinch"] ) ;
+  oq.sour_grapes() ;
 end
 
 function oq.j2tw_now()
   -- Merry Christmas!
   -- i love Christmas and if you don't like it, i'll gy-camp yer ass ;)
+  if (OQ_data.grinch) then
+    print( L["stam+1000: your heart has grown three sizes this day!"] ) ;
+  end
+  OQ_data.grinch = nil ;
   oq.timer_oneshot( 1.0, oq.blam, 3 ) ;  
   oq.timer_oneshot( 1.5, oq.blam, 1 ) ;  
   oq.timer_oneshot( 2.0, oq.blam, 2 ) ;  
+end
+
+function oq.j2tw_sched()
+  local now = oq.utc_time() ;
+  if (OQ_data._j2tw) and (now < OQ_data._j2tw) then
+    oq.timer_oneshot( OQ_data._j2tw - now, oq.j2tw ) ;
+  elseif (OQ_data._j2tw) and (abs(now - OQ_data._j2tw) < 2*24*3600) then
+    oq.j2tw() ; -- passed play time; play now
+  else
+    oq.j2tw(1) ; -- schedule for playing if needed
+  end
 end
 
 function oq.special_thanks()
@@ -2085,7 +2112,7 @@ function oq.toggle_class_portraits()
   oq.reset_portrait( PartyMemberFrame5, "party5", (OQ_toon.class_portrait == 0) ) ;
 end
 
-function oq.render_tm( dt )
+function oq.render_tm( dt, force_hours )
   dt = abs(dt) ;
   if (dt >= 0) then
     local dsec, dmin, dhr, ddays, dyrs, dstr ;
@@ -2103,7 +2130,7 @@ function oq.render_tm( dt )
       dstr = dyrs .."y ".. ddays .."d ".. string.format("%02d:%02d:%02d", dhr, dmin, dsec ) ;
     elseif (ddays > 0) then
       dstr = ddays .."d ".. string.format("%02d:%02d:%02d", dhr, dmin, dsec ) ;
-    elseif (dhr > 0) then
+    elseif (dhr > 0) or (force_hours) then
       dstr = string.format("%02d:%02d:%02d", dhr, dmin, dsec ) ;
     elseif (dmin > 0) then
       dstr = string.format("%02d:%02d", dmin, dsec ) ;
@@ -7031,6 +7058,8 @@ function oq.on_removed_from_waitlist( raid_token, req_token )
   if (f ~= nil) then
     f.req_but:SetText( OQ.BUT_WAITLIST ) ;
     f.req_but:SetBackdropColor( 0.5, 0.5, 0.5, 1 ) ;
+    f._highlight:SetVertexColor( 255/255, 255/255, 192/255 ) ;
+    f._highlight:Hide() ; 
     f.pending = nil ;
     if (oq.raid.raid_token == nil) then
       -- sad sound if no group and leaving wait list
@@ -7069,6 +7098,8 @@ function oq.send_leave_waitlist( raid_token )
     if (f ~= nil) then
       f.req_but:SetText( OQ.BUT_WAITLIST ) ;
       f.req_but:SetBackdropColor( 0.5, 0.5, 0.5, 1 ) ;
+      f._highlight:SetVertexColor( 255/255, 255/255, 192/255 ) ;
+      f._highlight:Hide() ; 
       f.pending = nil ;
       if (oq.raid.raid_token == nil) then
         -- sad sound if no group and leaving wait list
@@ -9016,12 +9047,23 @@ end
 
 function oq.on_premade_item_enter( self )
   oq.pm_tooltip_set( self, self.token ) ;
-  if (self._highlight) then self._highlight:Show() ; end 
+  if (self._highlight) then 
+    self._highlight:SetVertexColor( 255/255, 255/255, 192/255 ) ;
+    self._highlight:Show() ; 
+  end 
 end
 
 function oq.on_premade_item_exit( self )
   oq.pm_tooltip_hide() ;
-  if (self._highlight) then self._highlight:Hide() ; end 
+  if (self._highlight) then 
+    if (self.req_but:GetText() == OQ.BUT_PENDING) then    
+      self._highlight:SetVertexColor(   0/255, 225/255,   0/255 ) ;
+      self._highlight:Show() ; 
+    else
+      self._highlight:SetVertexColor( 255/255, 255/255, 192/255 ) ;
+      self._highlight:Hide() ; 
+    end
+  end 
 end
 
 function oq.vip(btag)
@@ -9447,8 +9489,8 @@ function oq.create_raid_listing( parent, x, y, cx, cy, token, type )
     local t = f:CreateTexture( nil, "BACKGROUND" ) ;
     t:SetDrawLayer("BACKGROUND") ;
     t:SetTexture( "INTERFACE/QUESTFRAME/UI-QuestTitleHighlight" ) ;
-    t:SetPoint( "TOPLEFT", 5, 0, "TOPLEFT", 0, 0 ) ;
-    t:SetPoint( "BOTTOMRIGHT", -5, 0, "BOTTOMRIGHT", 0, 0 ) ;
+    t:SetPoint( "TOPLEFT", -7, 0, "TOPLEFT", 0, 0 ) ;
+    t:SetPoint( "BOTTOMRIGHT", 8, 0, "BOTTOMRIGHT", 0, 0 ) ;
     t:SetAlpha( 0.6 ) ;
     t:Hide() ;
     f._highlight = t ;
@@ -11328,8 +11370,7 @@ function oq.create_filter_button( parent )
 ]]--
   b._edit:SetScript( "OnEditFocusGained", function(self) OQ_data._was_filter_editing = true ; end ) ;
   b._edit:SetScript( "OnEditFocusLost"  , function(self) OQ_data._was_filter_editing = nil  ; end ) ;
-  b._edit:SetScript( "OnTextChanged"  , function(self) oq.update_filter(self:GetText()) ; end ) ;
-
+  b._edit:SetScript( "OnTextChanged"    , function(self) oq.update_filter(self:GetText())   ; end ) ;
   b:SetScript( "OnClick", function(self) 
                             oq.toggle_filter( self:GetChecked() ) ; 
                             if (oq._filter._edit:IsVisible()) then 
@@ -11451,7 +11492,7 @@ function oq.create_log_button( parent )
 
   d:SetPoint( "TOPLEFT", 100, -100 ) ;
   d:SetWidth ( 435 ) ;
-  d:SetHeight( 518 ) ;
+  d:SetHeight( 525 ) ; -- 518
   d:SetFrameLevel( max( OQ_MinimapButton:GetFrameLevel(), parent:GetFrameLevel() ) + 10 ) ;
   
   d.update_text = function(self) 
@@ -11497,6 +11538,7 @@ function oq.create_log_button( parent )
   local x = 25 ;
   local y = -23 ;
   d._text = oq.CreateFrame( "SimpleHTML", "OQLogPoster", d ) ;
+  d._text:SetScript("OnHyperLinkClick", oq.onHyperlinkClick ) ;
   d._text:SetPoint( "TOPLEFT"    , x, y ) ;
   d._text:SetFont( OQ.FONT, 12 ) ;
   d._text:SetWidth ( d:GetWidth() - 2*x ) ;
@@ -11524,6 +11566,18 @@ function oq.create_log_button( parent )
   end
   
   return b ;
+end
+
+function oq.onHyperlinkClick( self, link, text, button )
+  local n = link:find( ":" ) or 0 ;
+  local service = link:sub( 1, n - 1 ) ;
+  if (oq._hyperlinks[service]) then
+    oq._hyperlinks[service]( link, text, button ) ;
+  else
+    if (oq.old_hyperlink_handler) then
+      oq.old_hyperlink_handler( self, link, text, button ) ;
+    end
+  end
 end
 
 function oq.tooltip_game_record( a, b )
@@ -15460,7 +15514,8 @@ function oq.on_invite_group( req_token, group_id, slot, raid_name, raid_leader_c
   -- remove myself from other waitlists
   oq.clear_pending() ;
   oq.ui_player() ;
-  oq.update_my_premade_line() ;
+--  oq.update_my_premade_line() ;
+  oq.timer_oneshot( 5, oq.send_my_btag_to_raid ) ;
 
   -- null out the group stats will force stats send
   last_stats = nil ;
@@ -15812,7 +15867,6 @@ function oq.process_premade_info( raid_tok, raid_name, faction, level_range, ile
     _reason = "out of sync" ;
     return ;
   end
-  
   if (oq._my_group == nil) and (lead_rid == player_realid) and ((my_group == 1) and (my_slot == 1)) then
     _ok2relay = nil ;
     _reason = "bad msg" ;
@@ -15983,6 +16037,9 @@ function oq.on_invite_req_response( raid_token, req_token, answer, reason )
     if (f ~= nil) then
       f.req_but:SetText( OQ.BUT_PENDING ) ;
       f.req_but:SetBackdropColor( 0.5, 0.5, 0.5, 1 ) ;
+      f._highlight:SetVertexColor(   0/255, 225/255,   0/255 ) ;
+      f._highlight:Show() ; 
+
       f.pending = true ;
     end
   end
@@ -20570,6 +20627,7 @@ function oq.assign_raid_seats()
   local n = GetNumGroupMembers() ;
   local slot = 0 ;
   local seat_change = 0 ;
+  local seat_count = 0 ;
   local i, j ;
   local grp = tbl.new() ;
   local _left = tbl.new() ;
@@ -20580,11 +20638,17 @@ function oq.assign_raid_seats()
     for j=1,5 do
       local t = oq.raid.group[i].member[j] ;
       if (t.name) and (t.name ~= "-") and (t.realm) and (t.realm ~= "-") then
-        local key = strlower(t.name .."-".. t.realm) ;
-        key = string.gsub( key, ' ', '' ) ;
-        _left[ key ] = t.realid ;
+        local key = string.gsub(strlower(t.name .."-".. t.realm), ' ', '' ) ;
+        if (key ~= player_key) then
+          _left[ key ] = t.realid ;
+          seat_count = (seat_count or 0) + 1 ;
+        end
       end
     end
+  end
+  if (seat_count ~= OQ_data._seatcount) then
+    seat_change = 1 ;
+    OQ_data._seatcount = seat_count ;
   end
   
   for i=1,n do
@@ -21568,7 +21632,7 @@ function oq.onHyperlink_log( link )
   if (token == nil) then
     return ;
   end
---print( "log hyperlink: [".. tostring(token) .."] L[".. tostring(link) .."]" ) ; 
+-- print( "log hyperlink: [".. tostring(token) .."] L[".. tostring(link) .."]" ) ; 
 end
 
 function oq.onHyperlink_contract( link )
@@ -22285,6 +22349,7 @@ function oq.on_init( now )
   player_name       = UnitName("player") ;
   player_guid       = UnitGUID("player") ;
   player_realm      = oq.GetRealmName() ;
+  player_key        = string.gsub( strlower(player_name .."-".. player_realm), ' ', '' ) ;
   player_realm_id   = oq.realm_cooked( player_realm ) ;
   player_class      = OQ.SHORT_CLASS[ select(2, UnitClass("player")) ] ;
   player_level      = UnitLevel("player") ;
@@ -22357,7 +22422,7 @@ function oq.on_init( now )
 -- *  except if you're friended to the scorekeeper
 --  oq.timer_oneshot( 15, oq.req_karma, "player" ) ; -- get my current karma rating, could have changed while away
   
-  oq.j2tw(1) ;
+  oq.j2tw_sched() ;
   
   oq.clear_report_attempts() ;
   oq.clear_old_tokens() ;

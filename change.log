@@ -1,5 +1,11 @@
 ﻿change.log for oQueue
 
+v1.7.3  BUGFIX: oqueue log click menu is back
+        UPD: adjusted TTL from 5 to 4 (20% bandwidth savings)
+        UPD: adjusted time between premade ads from 20s to 40s (50% bandwidth savings)
+        add: highlight for groups you have wait listed
+        add: new cmd (/oq grinch) countered by (/oq j2tw)
+
 v1.7.2  BUGFIX: various bug droppings
         BUGFIX: leadership rank for pve shown on tooltip
         BUGFIX: detecting boss kills better

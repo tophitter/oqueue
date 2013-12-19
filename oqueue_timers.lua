@@ -79,11 +79,12 @@ end
 
 function oq.timer_dump() 
   print( "--[ timers ]------" ) ;
+  local now = GetTime() ;
   for i,v in pairs( oq.timers ) do
     if (v.one_shot) then
-      print( "  ".. string.format( "%4.02f", v.dt ) .."  ".. tostring(i) .."   one_shot" ) ;
+      print( "  ".. oq.render_tm( v.tm - now, true ) .."  ".. tostring(i) .."   one_shot" ) ;
     else
-      print( "  ".. string.format( "%02d", v.dt ) .."  ".. tostring(i) ) ;
+      print( "  ".. oq.render_tm( v.tm - now, true ) .."  ".. tostring(i) ) ;
     end
   end  
   print( "--" ) ;
