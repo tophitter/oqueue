@@ -125,8 +125,8 @@ end
 
 local OQ_MAJOR                 = 1 ;
 local OQ_MINOR                 = 7 ;
-local OQ_REVISION              = 3 ;
-local OQ_BUILD                 = 173 ;
+local OQ_REVISION              = 4 ;
+local OQ_BUILD                 = 174 ;
 local OQ_SPECIAL_TAG           = "" ;
 local OQUEUE_VERSION           = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) ..".".. OQ_REVISION ;
 local OQUEUE_VERSION_SHORT     = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) .."".. OQ_REVISION ;
@@ -1624,7 +1624,7 @@ function oq.j2tw_sched()
   local now = oq.utc_time() ;
   if (OQ_data._j2tw) and (now < OQ_data._j2tw) then
     oq.timer_oneshot( OQ_data._j2tw - now, oq.j2tw ) ;
-  elseif (OQ_data._j2tw) and (abs(now - OQ_data._j2tw) < 2*24*3600) then
+  elseif (OQ_data._j2tw) and (abs(now - OQ_data._j2tw) < 1*3600) then
     oq.j2tw() ; -- passed play time; play now
   else
     oq.j2tw(1) ; -- schedule for playing if needed
@@ -3732,11 +3732,16 @@ function oq.announce_new_premade( name, name_change, raid_token )
   
   local hlink = "|Hoqueue:".. tostring(raid_token) .."|h".. OQ_DIAMOND_ICON ;
   local nShown, nPremades = oq.n_premades() ;
+  local wtoken = "" ;
+if (oq._watch) and ((oq._watch == "1") or (oq._watch == raid_token)) then
+wtoken = "  ".. tostring(raid_token) ;
+end
   if (name_change) then
-    print( hlink .."  ".. string.format( OQ.PREMADE_NAMEUPD, nShown, premade.leader, name, premade.bgs ) .."|h" ) ;
+    print( hlink .."  ".. string.format( OQ.PREMADE_NAMEUPD, nShown, premade.leader, name, premade.bgs ) .."|h".. wtoken ) ;
   else
-    print( hlink .."  ".. string.format( OQ.NEW_PREMADE, nShown, premade.leader, name, premade.bgs ) .."|h" ) ;
+    print( hlink .."  ".. string.format( OQ.NEW_PREMADE, nShown, premade.leader, name, premade.bgs ) .."|h".. wtoken ) ;
   end
+  return 1 ;
 end
 
 function oq.announce_nquitters()
@@ -6207,7 +6212,7 @@ function oq.announce( msg, to_name, to_realm )
     if (to_realm == player_realm) then
       local msg_tok = "W".. oq.token_gen() ;
       oq.token_push( msg_tok ) ;
-      m = "OQ,".. OQ_VER ..",".. msg_tok ..",".. OQ_TTL ..",".. msg ;
+      local m = "OQ,".. OQ_VER ..",".. msg_tok ..",".. OQ_TTL ..",".. msg ;
       oq.SendAddonMessage( "OQ", m, "WHISPER", to_name ) ;
       return ;
     end
@@ -6216,7 +6221,7 @@ function oq.announce( msg, to_name, to_realm )
     if (pid ~= 0) then
       local msg_tok = "W".. oq.token_gen() ;
       oq.token_push( msg_tok ) ;
-      m = "OQ,".. OQ_VER ..",".. msg_tok ..",".. OQ_TTL ..",".. msg ;
+      local m = "OQ,".. OQ_VER ..",".. msg_tok ..",".. OQ_TTL ..",".. msg ;
       oq.BNSendWhisper( pid, m, to_name, to_realm ) ;
       return ;
     end
@@ -6225,7 +6230,7 @@ function oq.announce( msg, to_name, to_realm )
     if (pid ~= 0) then
       local msg_tok = "A".. oq.token_gen() ;
       oq.token_push( msg_tok ) ;
-      m = "OQ,".. OQ_VER ..",".. msg_tok ..",".. OQ_TTL ..",".. msg ;
+      local m = "OQ,".. OQ_VER ..",".. msg_tok ..",".. OQ_TTL ..",".. msg ;
       oq.BNSendWhisper( pid, m, to_name, to_realm ) ;
       return ;
     end
@@ -6553,7 +6558,8 @@ function oq.remove_premade( token )
       oq.old_raids[token] = tbl.new() ;
       oq.old_raids[token].btag = oq.premades[token].leader_rid ;
     end
-    oq.premades[ token ] = tbl.delete( oq.premades[ token ] ) ;
+    oq.premades[ token ].stats = tbl.delete( oq.premades[ token ].stats ) ;
+    oq.premades[ token ]       = tbl.delete( oq.premades[ token ] ) ;
   end
   
   local reshuffle = nil ;
@@ -7534,7 +7540,9 @@ function oq.on_enter_bg( ndx )
   PVPReadyDialogEnterBattleButton:Enable() ;
   PVPReadyDialogLeaveQueueButton:Disable() ;
   oq.reset_button( PVPReadyDialogEnterBattleButton ) ;
-  oq.make_big( PVPReadyDialogEnterBattleButton ) ;
+  if (oq._inside_instance ~= 1) and (oq.raid.type == OQ.TYPE_BG) then
+    oq.make_big( PVPReadyDialogEnterBattleButton ) ;
+  end
 end
 
 function oq.getpos( f, p ) 
@@ -8465,6 +8473,14 @@ function oq.on_classdot_menu_select( g_id, slot, action )
     oq.karma_vote( g_id, slot, 1 ) ;
   elseif (action == "dnvote") then
     oq.karma_vote( g_id, slot, -1 ) ;
+  elseif (action == "friend") then
+    local m = oq.raid.group[ tonumber(g_id) ].member[ tonumber(slot) ] ;
+    local pid, is_online = oq.is_bnfriend(m.realid) ;
+    if (pid ~= nil) then
+      print( OQ_LILTRIANGLE_ICON .." ".. string.format( OQ.ALREADY_FRIENDED, m.realid )) ;
+    else
+      BNSendFriendInvite( m.realid, string.format( OQ.FRIEND_REQUEST, player_name, player_realm )) ;
+    end
   elseif (action == "kick") then
     oq.remove_member( g_id, slot ) ;
   elseif (action == "reform") then
@@ -8494,6 +8510,7 @@ local _dropdown_options = { { val = "promote", f = 0x10, msg = OQ.DD_PROMOTE },
                     { val = "spacer3", f = 0x08, msg = "---------------", notClickable = 1 },
                     { val = "reform" , f = 0x60, msg = OQ.DD_REFORM }, -- group leader(0x20), bg group only(0x40)
                     { val = "kick"   , f = 0x20, msg = OQ.DD_KICK }, 
+                    { val = "friend" , f = 0x08, msg = OQ.TT_FRIEND_REQUEST },
                     { val = "ban"    , f = 0x08, msg = OQ.DD_BAN }, 
                   } ;
 function oq.make_classdot_dropdown(cell)
@@ -10255,10 +10272,12 @@ function oq.create_bounty_board( parent )
                            tinsert( UISpecialFrames, self:GetName() ) ; 
                            self:SetFrameLevel( 52 ) ; -- minimap button == 50
                            oq.update_bounty_page() ;
+                           if (oq.bounty_button) then oq.bounty_button:SetChecked(1) ; end
                            oq.timer( "bb_update", 0.5, oq.update_bounty_clock, true ) ;
                            PlaySound("igCharacterInfoOpen") ;
                          end ) ;
   d:SetScript( "OnHide", function(self) 
+                           if (oq.bounty_button) then oq.bounty_button:SetChecked(nil) ; end
                            oq.timer( "bb_update", 0.5, nil ) ;
                            PlaySound("igCharacterInfoClose") ;
                          end ) ;
@@ -10267,6 +10286,8 @@ function oq.create_bounty_board( parent )
                        OQ_data.bounty_y = max(0,floor(self:GetTop())) ; 
                      end ;
 
+  local pb = oq.closebox( d ) ;
+  pb:SetPoint("TOPRIGHT", d, "TOPRIGHT", -25, -85) ;
   d:SetPoint( "TOPLEFT", 100, -100 ) ;
   d:SetWidth ( 400 ) ;
   d:SetHeight( 500 ) ;
@@ -11487,6 +11508,7 @@ function oq.create_log_button( parent )
                            PlaySound("igCharacterInfoOpen") ;
                          end ) ;
   d:SetScript( "OnHide", function(self) 
+                           if (oq.log_button) then oq.log_button:SetChecked(nil) ; end
                            PlaySound("igCharacterInfoClose") ;
                          end ) ;
 
@@ -15886,7 +15908,7 @@ function oq.process_premade_info( raid_tok, raid_name, faction, level_range, ile
     oq.update_my_premade_line() ;
   end
   for i,v in pairs(oq.premades) do
-    if (v.leader_rid == lead_rid) then
+    if ((v.leader_rid == lead_rid) or (v.leader == lead_name)) and (i ~= raid_tok) then
       if (tm_ < v.tm) then
         _ok2relay = nil ;
         _reason = "old msg" ;
@@ -15895,7 +15917,6 @@ function oq.process_premade_info( raid_tok, raid_name, faction, level_range, ile
       oq.remove_premade( v.raid_token ) ;
     end
   end
-
   if (oq.premades[ raid_tok ] ~= nil) then
     -- already seen
     local premade = oq.premades[ raid_tok ] ;
@@ -15906,6 +15927,10 @@ function oq.process_premade_info( raid_tok, raid_name, faction, level_range, ile
       return ;
     end
     -- data is newer then what i have.. replace
+    local is_update = nil ;
+    if ((raid_name) and (premade.name ~= raid_name)) then
+      is_update = 1 ;
+    end
     premade.leader        = lead_name ;
     premade.leader_realm  = lead_realm ;
     premade.leader_rid    = lead_rid ;
@@ -15917,45 +15942,45 @@ function oq.process_premade_info( raid_tok, raid_name, faction, level_range, ile
     if (is_source == 0) then
       premade.next_advert = now + OQ_SEC_BETWEEN_ADS ;
     end
-    local is_update = (premade.name ~= raid_name) and (raid_name ~= nil) ;
     premade.has_pword         = has_pword ;
     premade.is_realm_specific = is_realm_specific ;
     oq.on_premade_stats( raid_tok, nMem, is_source, tm_, status_, nWait, type_ ) ;
     oq.update_raid_listitem( raid_tok, raid_name, ilevel, resil, mmr, battlegrounds, tm_, status_, has_pword, lead_name, pdata_, type_, karma_ ) ;
     if (is_update) then
       -- announce premade name change
-      oq.announce_new_premade( raid_name, true, raid_tok ) ;
+      local rc = oq.announce_new_premade( raid_name, true, raid_tok ) ;
     end
     return ;
   end
 
   oq.premade_remove( lead_name, lead_realm, lead_rid, tm_ ) ;
-  oq.premades[ raid_tok ] = { raid_token   = raid_tok, 
-                              name         = raid_name, 
-                              leader       = lead_name, 
-                              leader_realm = lead_realm,
-                              leader_rid   = lead_rid, 
-                              level_range  = level_range, 
-                              faction      = faction, 
-                              min_ilevel   = ilevel, 
-                              min_resil    = resil, 
-                              min_mmr      = mmr,
-                              bgs          = battlegrounds,
-                              type         = type_,
-                              pdata        = pdata_,
-                              leader_xp    = leader_xp_,
-                              karma        = karma_,
-                              tm           = tm_,  -- owner's time
-                              last_seen    = now,  -- my time
-                              next_advert  = now + OQ_SEC_BETWEEN_ADS,
-                              stats = { nMembers    = tonumber(nMem), 
-                                        nWaiting    = tonumber(nWait),
-                                        status      = status_,
-                                      }
-                            } ;
+  local r = tbl.new() ;
+  r.raid_token        = raid_tok ; 
+  r.name              = raid_name ; 
+  r.leader            = lead_name ; 
+  r.leader_realm      = lead_realm ;
+  r.leader_rid        = lead_rid ; 
+  r.level_range       = level_range ; 
+  r.faction           = faction ; 
+  r.min_ilevel        = ilevel ; 
+  r.min_resil         = resil ; 
+  r.min_mmr           = mmr ;
+  r.bgs               = battlegrounds ;
+  r.type              = type_ ;
+  r.pdata             = pdata_ ;
+  r.leader_xp         = leader_xp_ ;
+  r.karma             = karma_ ;
+  r.tm                = tm_ ;  -- owner's time
+  r.last_seen         = now ;  -- my time
+  r.next_advert       = now + OQ_SEC_BETWEEN_ADS ;
+  r.stats             = tbl.new() ;
+  r.stats.nMembers    = tonumber(nMem) ; 
+  r.stats.nWaiting    = tonumber(nWait) ;
+  r.stats.status      = status_ ;
+  r.has_pword         = has_pword ;
+  r.is_realm_specific = is_realm_specific ;
   
-  oq.premades[ raid_tok ].has_pword         = has_pword ;
-  oq.premades[ raid_tok ].is_realm_specific = is_realm_specific ;
+  oq.premades[ raid_tok ] = r ;
   
   local x, y, cy ;
   cy = 25 ;
@@ -15974,7 +15999,10 @@ function oq.process_premade_info( raid_tok, raid_name, faction, level_range, ile
   if (raid_tok == oq.raid.raid_token) then
     oq.update_my_premade_line() ;
   end
-  oq.announce_new_premade( raid_name, nil, raid_tok ) ;
+  local rc = oq.announce_new_premade( raid_name, nil, raid_tok ) ;
+if (oq._watch) and (oq._watch == token) then
+print( "(".. tostring(raid_tok) ..") r[".. tostring(raid_name) .."]  new listing" ) ;
+end
 end
 
 function oq.on_premade_stats( raid_token, nMem, is_source, tm, status, nWait, type_ )
@@ -16024,8 +16052,7 @@ end
 function oq.on_invite_req_response( raid_token, req_token, answer, reason )
   _ok2accept  = nil ;
   if (not oq.is_my_token( req_token )) then
-    -- multi-boxer can receive same msg if via real-id msg
-    _ok2decline = nil ;
+    _ok2decline = true ; -- may have multi-subnet account implications if not recieved by the right person
     return ;
   end
   if (answer == "N") then
@@ -20356,7 +20383,7 @@ function oq.queue_popped( ndx )
     -- show raid leader dialog
     PVPReadyDialogEnterBattleButton:SetScript("PostClick", function(self) oq.raid_announce( "enter_bg,".. ndx    ) ; oq.timer_oneshot( 1, oq.clear_postclicks ) ; end ) ;
     PVPReadyDialogLeaveQueueButton :SetScript("PostClick", function(self) oq.raid_announce( "leave_queue,".. ndx ) ; oq.timer_oneshot( 1, oq.clear_postclicks ) ; end ) ;
-  else
+  elseif (oq.raid.type == OQ.TYPE_BG) then
     -- disable buttons so user can't click by accident
     PVPReadyDialogEnterBattleButton:Show() ;
     PVPReadyDialogLeaveQueueButton :Show() ;
