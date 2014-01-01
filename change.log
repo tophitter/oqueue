@@ -1,10 +1,15 @@
 ﻿change.log for oQueue
 
+v1.7.5  BUGFIX: recycled premade lines reset properly (no longer 'pending' on groups you didn't waitlist)
+        UPD: extended cmdline option; /oq [show [btags [subtext]]]; '/oq show btags joe' shows all btags with 'joe' either in btag or note
+        add: wait list and ban list sort order will now be remembered
+        add: cmdline option; /oq show locals; will dump the groups created by local leaders
+
 v1.7.4  BUGFIX: announce-premades will only display if name changes on existing groups
         BUGFIX: log button and bounty board button will check and uncheck properly when hidden/shown
-        BUGFIX: bounty board now has a close button in the top right (on the black banner bar)
         UPD: the angry lil button will only appear for regular battleground groups (the only premade type where there's a choice)
         add: new option on the main premade popup menus: friend request
+        add: bounty board now has a close button in the top right (on the black banner bar)
 
 v1.7.3  BUGFIX: oqueue log click menu is back
         UPD: adjusted TTL from 5 to 4 (20% bandwidth savings)

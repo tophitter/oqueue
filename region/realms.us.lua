@@ -867,5 +867,6 @@ OQ.gbl = { ["tts#1959"         ] = "exploiting",  -- OQ exploiter
            ["oden#1613"        ] = "exploiting",  -- OQ exploiter; silver dragon
 --           ["bryan732#1470"    ] = "exploiting",  -- OQ exploiter; silver dragon (rbg)  ; probation(10dec2013a)
            [ "omg#1793"        ] = "exploit-fraud", -- impersonating another's btag; gold dragon; spamming; etc 
+           [ "oqsk#1984"       ] = "exploit-spammer", -- mesh flooding
          } ;
 end

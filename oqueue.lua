@@ -125,8 +125,8 @@ end
 
 local OQ_MAJOR                 = 1 ;
 local OQ_MINOR                 = 7 ;
-local OQ_REVISION              = 4 ;
-local OQ_BUILD                 = 174 ;
+local OQ_REVISION              = 5 ;
+local OQ_BUILD                 = 175 ;
 local OQ_SPECIAL_TAG           = "" ;
 local OQUEUE_VERSION           = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) ..".".. OQ_REVISION ;
 local OQUEUE_VERSION_SHORT     = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) .."".. OQ_REVISION ;
@@ -1741,10 +1741,12 @@ function oq.show_data( opt )
     oq.show_the_book() ;
   elseif (opt == "remove") then
     oq.remove_OQadded_bn_friends( "show" ) ;
-  elseif (opt == "btags") then
-    oq.show_btags() ;
+  elseif (opt:find("btags") == 1) then
+    oq.show_btags(opt) ;
   elseif (opt == "count") then
     oq.show_count() ;
+  elseif (opt == "locals") then
+    oq.show_locals() ;
   elseif (opt == "report") then
     oq.show_reports() ;
   elseif (opt == "raid") or (opt == "premade") then
@@ -6090,12 +6092,16 @@ end
 local _btags = nil ;
 local _btag_ids = nil ;
 
-function oq.show_btags() 
+function oq.show_btags(opt) 
   if (_btags == nil) then
     _btags = tbl.new() ;
   end
   if (_btag_ids == nil) then
     _btag_ids = tbl.new() ;
+  end
+  local arg = nil ;
+  if (opt) and (opt:find(' ')) then
+    arg = strlower(opt:sub(opt:find(' ')+1, -1)) ;
   end
   local ntotal, nonline = BNGetNumFriends() ;
   tbl.clear( _btags ) ;
@@ -6111,9 +6117,20 @@ function oq.show_btags()
     end
   end  
   table.sort( _btag_ids ) ;  -- names have embedded codes making it impossible to sort by name
+  print( "--[ your b.net friends ]--" ) ;
   for i,v in pairs(_btag_ids) do
-    print( tostring(v) .."  |cFFFFFF00".. tostring(_btags[v].name) .."|r  ".. tostring(_btags[v].note) ) ;
+    if (arg) then
+      local n1 = strlower(v) ;
+      local n2 = strlower(_btags[v].name) ;
+      local n3 = strlower(_btags[v].note) ;
+      if n1:find(arg) or n2:find(arg) or n3:find(arg) then
+        print( tostring(v) .."  |cFFFFFF00".. tostring(_btags[v].name) .."|r  ".. tostring(_btags[v].note) ) ;
+      end
+    else
+      print( tostring(v) .."  |cFFFFFF00".. tostring(_btags[v].name) .."|r  ".. tostring(_btags[v].note) ) ;
+    end
   end
+  print( "--" ) ;
   
   -- cleanup
   for i,v in pairs(_btags) do
@@ -6763,9 +6780,9 @@ function oq.create_ban_listitem( parent, x, y, cx, cy, btag, reason, ts )
   f.ts:SetFont(OQ.FONT_FIXED, 9, "") ;
   f.ts:SetTextColor( 1,1,1 ) ;
   x2 = x2 + 130 + 8 ;
-  f.btag   = oq.label ( f, x2, 2, 125, cy, btag ) ;
+  f.btag   = oq.label ( f, x2, 2, 200, cy, btag ) ;
   f.btag:SetFont(OQ.FONT, 10, "") ;
-  x2 = x2 + 125 + 4 ;
+  x2 = x2 + 200 + 4 ;
   f.reason = oq.label ( f, x2, 2, 450, cy, reason ) ;
   f.reason:SetFont(OQ.FONT, 10, "") ;
   f.reason:SetTextColor( 0.9, 0.9, 0.9 ) ;
@@ -6799,15 +6816,15 @@ function oq.compare_banlist( a, b )
   end
   local v1 = oq.tab6_banlist[a] ;
   local v2 = oq.tab6_banlist[b] ;
-  if (oq.banlist_sort_ascending == nil) then
+  if (OQ_data.banlist_sort_ascending == nil) then
     v1 = oq.tab6_banlist[b] ;
     v2 = oq.tab6_banlist[a] ;
   end
 
-  if (oq.banlist_sort == "ts") then
+  if (OQ_data.banlist_sort == "ts") then
     return (v1._ts < v2._ts) ;
   end
-  if (oq.banlist_sort == "reason") then
+  if (OQ_data.banlist_sort == "reason") then
   return (strlower(v1.reason:GetText()) < strlower(v2.reason:GetText())) ;
   end
   -- default sort: btag
@@ -6815,8 +6832,8 @@ function oq.compare_banlist( a, b )
 end
 
 function oq.sort_banlist( col )
-  local order = oq.banlist_sort_ascending ;
-  if (oq.banlist_sort ~= col) then
+  local order = OQ_data.banlist_sort_ascending ;
+  if (OQ_data.banlist_sort ~= col) then
     order = true ;
   else
     if (order) then
@@ -6825,8 +6842,8 @@ function oq.sort_banlist( col )
       order = true ;
     end
   end
-  oq.banlist_sort = col ;
-  oq.banlist_sort_ascending = order ;
+  OQ_data.banlist_sort = col ;
+  OQ_data.banlist_sort_ascending = order ;
   oq.reshuffle_banlist() ;
 end
 
@@ -6902,7 +6919,7 @@ function oq.compare_waitlist(a,b)
   local v2 = oq.tab7_waitlist[b] ;
   local p1 = oq.waitlist[ v1.token ] ;
   local p2 = oq.waitlist[ v2.token ] ;
-  if (oq.waitlist_sort_ascending == nil) then
+  if (OQ_data.waitlist_sort_ascending == nil) then
     v1 = oq.tab7_waitlist[b] ;
     v2 = oq.tab7_waitlist[a] ;
     p1 = oq.waitlist[ v1.token ] ;
@@ -6914,40 +6931,40 @@ function oq.compare_waitlist(a,b)
     return true ;
   end
   
-  if (oq.waitlist_sort == "bgrp") then
+  if (OQ_data.waitlist_sort == "bgrp") then
     return (strlower(oq.find_bgroup(p1.realm)) < strlower(oq.find_bgroup(p2.realm))) ;
   end
-  if (oq.waitlist_sort == "name") then
+  if (OQ_data.waitlist_sort == "name") then
     return (strlower(p1.name) < strlower(p2.name)) ;
   end
-  if (oq.waitlist_sort == "rlm") then
+  if (OQ_data.waitlist_sort == "rlm") then
     return (strlower(p1.realm) < strlower(p2.realm)) ;
   end
-  if (oq.waitlist_sort == "level") then
+  if (OQ_data.waitlist_sort == "level") then
     return (p1.level < p2.level) ;
   end
-  if (oq.waitlist_sort == "ilevel") then
+  if (OQ_data.waitlist_sort == "ilevel") then
     return oq.is_lessthan(p1.ilevel, p2.ilevel) ;
   end
-  if (oq.waitlist_sort == "resil") then
+  if (OQ_data.waitlist_sort == "resil") then
     return oq.is_lessthan(p1.resil, p2.resil) ;
   end
-  if (oq.waitlist_sort == "mmr") then
+  if (OQ_data.waitlist_sort == "mmr") then
     return oq.is_lessthan(p1.mmr, p2.mmr) ;
   end
-  if (oq.waitlist_sort == "power") then
+  if (OQ_data.waitlist_sort == "power") then
     return oq.is_lessthan(p1.pvppower, p2.pvppower) ;
   end
-  if (oq.waitlist_sort == "haste") then
+  if (OQ_data.waitlist_sort == "haste") then
     return oq.is_lessthan(p1.haste, p2.haste) ;
   end
-  if (oq.waitlist_sort == "mastery") then
+  if (OQ_data.waitlist_sort == "mastery") then
     return oq.is_lessthan(p1.mastery, p2.mastery) ;
   end
-  if (oq.waitlist_sort == "hit") then
+  if (OQ_data.waitlist_sort == "hit") then
     return oq.is_lessthan(p1.hit, p2.hit) ;
   end
-  if (oq.waitlist_sort == "time") then
+  if (OQ_data.waitlist_sort == "time") then
     return oq.is_lessthan(p1.create_tm, p2.create_tm) ;
   end
   return true ;
@@ -9511,6 +9528,9 @@ function oq.create_raid_listing( parent, x, y, cx, cy, token, type )
     t:SetAlpha( 0.6 ) ;
     t:Hide() ;
     f._highlight = t ;
+  else
+    f._highlight:SetVertexColor( 255/255, 255/255, 192/255 ) ;
+    f._highlight:Hide() ; 
   end
 
   local x2 = 0 ;
@@ -9550,10 +9570,12 @@ function oq.create_raid_listing( parent, x, y, cx, cy, token, type )
                                                   oq.get_battle_tag() ;
                                                   if ((player_realid == nil) or (player_realid == "")) then
                                                     return ;
-                                                  else
-                                                    oq.check_and_send_request( self:GetParent().token ) ;
                                                   end
+                                                  oq.check_and_send_request( self:GetParent().token ) ;
                                                 end ) ;
+  else
+    f.req_but:SetText( OQ.BUT_WAITLIST ) ;
+    f.req_but:SetBackdropColor( 0.5, 0.5, 0.5, 1 ) ;
   end
   x2 = x2 +  80 ;
   if (f.unlist_but == nil) then
@@ -12740,8 +12762,8 @@ function oq.create_tab3()
 end
 
 function oq.sort_waitlist( col )
-  local order = oq.waitlist_sort_ascending ;
-  if (oq.waitlist_sort ~= col) then
+  local order = OQ_data.waitlist_sort_ascending ;
+  if (OQ_data.waitlist_sort ~= col) then
     order = true ;
   else
     if (order) then
@@ -12750,8 +12772,8 @@ function oq.sort_waitlist( col )
       order = true ;
     end
   end
-  oq.waitlist_sort = col ;
-  oq.waitlist_sort_ascending = order ;
+  OQ_data.waitlist_sort = col ;
+  OQ_data.waitlist_sort_ascending = order ;
   oq.reshuffle_waitlist() ;
 end
 
@@ -12892,8 +12914,6 @@ function oq.create_tab_waitlist()
 
   -- tag
   oq.tab7_tag = oq.place_tag( parent ) ;
-  oq.waitlist_sort = "time" ;
-  oq.waitlist_sort_ascending = true ;
   oq.reshuffle_waitlist() ;
 end
 
@@ -12913,7 +12933,7 @@ function oq.create_tab_banlist()
 --  oq.label( parent, x, y, 450, cy, OQ.HDR_REASON  ) ;  
   f = oq.click_label( parent, x, y, 130, cy, OQ.HDR_DATE   ) ;  x = x +  130 + 6 ;
   f:SetScript("OnClick", function(self) oq.sort_banlist( "ts" ) ; end ) ;
-  f = oq.click_label( parent, x, y, 125, cy, OQ.HDR_BTAG   ) ;  x = x +  125 + 4 ;
+  f = oq.click_label( parent, x, y, 200, cy, OQ.HDR_BTAG   ) ;  x = x +  200 + 4 ;
   f:SetScript("OnClick", function(self) oq.sort_banlist( "btag" ) ; end ) ;
   f = oq.click_label( parent, x, y, 450, cy, OQ.HDR_REASON ) ;  
   f:SetScript("OnClick", function(self) oq.sort_banlist( "reason" ) ; end ) ;
@@ -12930,8 +12950,6 @@ function oq.create_tab_banlist()
 
   -- tag
   oq.tab6_tag = oq.place_tag( parent ) ;
-  oq.banlist_sort = "ts" ;
-  oq.banlist_sort_ascending = true ;
 
   oq.populate_ban_list() ; 
 end
@@ -14378,6 +14396,15 @@ function oq.on_bnet_friend_invite()
 end
 
 function oq.on_disband( raid_tok, token, local_override )
+  if (oq.bad_source(raid_tok)) then
+    _ok2relay = nil ;
+    return ;
+  end
+  if (_source == "bnfinvite") then
+    _ok2relay   = nil ;
+    _ok2decline = true ;
+    return ;
+  end
   oq._error_ignore_tm  = GetTime() + 5 ;
   if (oq.token_was_seen( token ) and (local_override == nil)) then
     _ok2relay = nil ; 
@@ -15793,10 +15820,91 @@ function oq.update_raid_listitem( raid_tok, raid_name, ilevel, resil, mmr, battl
   end
 end
 
+function oq.trim_oldies(now) 
+  if (OQ_data._locals == nil) then
+    OQ_data._locals = tbl.new() ;
+  end
+  -- trim trash
+  for i,v in pairs(OQ_data._locals) do
+    local cnt = 0 ;
+    for j,tm in pairs(v) do
+      if ((now - tm) > OQ_PREMADE_STAT_LIFETIME) then
+        v[j] = nil ;
+      else
+        cnt = cnt + 1 ;
+      end
+    end
+    if (cnt == 0) then
+      OQ_data._locals[i] = tbl.delete(OQ_data._locals[i]) ;
+    end
+  end
+end
+
+function oq.show_locals()
+  local now = oq.utc_time() ;
+  local tm, v, sender, raid_tok ;
+  oq.trim_oldies(now) ;
+  print( "--[ local premade leaders ]--" ) ;
+  for sender,v in pairs(OQ_data._locals) do
+    for raid_tok,tm in pairs(v) do
+      local p = oq.premades[ raid_tok ] ;
+      if (p) then
+        print( "  ".. tostring(sender) ..": [".. tostring(raid_tok) .."] ".. tostring(p.name) ) ;
+      else
+        print( "  ".. tostring(sender) ..": [".. tostring(raid_tok) .."]  ".. OQ_LILREDX_ICON ) ;
+      end
+    end
+  end
+  print( "--" ) ;
+end
+
+OQ.MAX_ORIGINALS = 5 ;
+function oq.bad_source(raid_tok)
+  if ((_source ~= "oqgeneral") and (_source ~= "addon")) or (_hop < OQ_TTL) or (oq._sender == "#backup") then
+    return ;
+  end
+  local now = oq.utc_time() ;
+  
+  oq.trim_oldies(now) ;
+  
+  local sender = oq._sender ;
+  if (sender:find("-") == nil) then
+    sender = sender .."-".. player_realm ;
+  end
+  sender = strlower(sender) ;
+  
+  if (OQ_data._locals[sender] == nil) then
+    OQ_data._locals[sender] = tbl.new() ;
+  end
+  OQ_data._locals[sender][raid_tok] = now ;
+  
+  if (oq.is_banned(sender)) then
+    return true ;
+  else
+    local cnt = 0 ;
+    for i,v in pairs(OQ_data._locals[sender]) do
+      cnt = cnt + 1 ;
+    end  
+    if (cnt > OQ.MAX_ORIGINALS) then
+      print( OQ_LILSKULL_ICON .."  ".. L["group spammer spotted."] .."  ".. tostring(sender) .." ".. L["added to the ban list"] ) ;
+      oq.ban_add( sender, L["auto-add: group spammer"] ) ;
+      for i,v in pairs(OQ_data._locals[sender]) do
+        oq.remove_premade(i) ;
+      end  
+      return true ;
+    end
+  end
+end
+
 local npremades = 0 ;
 local _premadeinfo = nil ;
 function oq.on_premade( raid_tok, raid_name, premade_info, enc_data, bgs_, type_, pdata_, leader_xp_, subtype_ )
   if (enc_data == nil) or (OQ_toon.disabled) then
+    return ;
+  end
+  if (_source == "bnfinvite") then
+    _ok2relay   = nil ;
+    _ok2decline = true ;
     return ;
   end
   if (subtype_) and (subtype_:find("#") ~= nil) then
@@ -15808,6 +15916,10 @@ function oq.on_premade( raid_tok, raid_name, premade_info, enc_data, bgs_, type_
   end
   if (pdata_ == nil) or (pdata_:find( "#rlm" )) then
     pdata_ = "-----" ;
+  end
+  if (oq.bad_source(raid_tok)) then
+    _ok2relay = nil ;
+    return ;
   end
   oq._raid_token = raid_tok ;
   _premadeinfo = premade_info ;
@@ -15894,7 +16006,6 @@ function oq.process_premade_info( raid_tok, raid_name, faction, level_range, ile
     _reason = "bad msg" ;
     return ;
   end
-
   if (oq.is_banned( lead_rid )) then
     -- do not record or relay premade info for banned people
     _ok2relay = nil ;
@@ -19962,7 +20073,7 @@ function oq.process_msg( sender, msg )
     end
   elseif ((_msg_type == 'A') or (_msg_type == 'W')) then
     _hop = tonumber(_vars[4]) ;
-    if (oq.proc[ msg_id ] ~= nil) then
+    if (oq.proc[ msg_id ] ~= nil) and (_hop) and (_hop <= OQ_TTL) then
       oq.proc[ msg_id ]( _vars[ 6], _vars[ 7], _vars[ 8], _vars[ 9], _vars[10], 
                          _vars[11], _vars[12], _vars[13], _vars[14], _vars[15], 
                          _vars[16], _vars[17], _vars[18], _vars[19], _vars[20],
@@ -22847,6 +22958,14 @@ function oq.attempt_group_recovery()
     OQ_data.premade_sort_ascending = true ;
   end
   oq.t3 = oq.decode_data ;
+  if (OQ_data.banlist_sort == nil) then
+    OQ_data.banlist_sort = "ts" ;
+    OQ_data.banlist_sort_ascending = true ;
+  end
+  if (OQ_data.waitlist_sort == nil) then
+    OQ_data.waitlist_sort = "time" ;
+    OQ_data.waitlist_sort_ascending = true ;
+  end
   
   -- default qualified option for find-premades
   if (OQ_data.premade_filter_qualified == nil) then
