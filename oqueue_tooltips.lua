@@ -733,6 +733,9 @@ function oq.pm_tooltip_set( f, raid_token )
   if (raid == nil) then
     return ;
   end
+  if (raid.leader_xp == nil) then
+    raid.leader_xp = "" ;
+  end
   local s = raid.stats ;
   local nMembers = s.nMembers ;
   local nWaiting = s.nWaiting ;
@@ -750,7 +753,7 @@ function oq.pm_tooltip_set( f, raid_token )
 
   pm_tooltip.left [ 1]:SetText( raid.name ) ;
   pm_tooltip.right[ 1]:SetText( oq.get_rank_icons( raid.leader_xp:sub(10,-1) ) ) ;
-  
+ 
   pm_tooltip.left [ 2]:SetText( OQ.TT_LEADER ) ;
   
   if (raid.karma) and (raid.karma ~= 0) then

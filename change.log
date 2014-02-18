@@ -1,5 +1,18 @@
 ﻿change.log for oQueue
 
+v1.7.6  BUGFIX: empty leaderxp handled
+        BUGFIX: find-mesh handling error fixed
+        UPD: updated entering and leaving oqgeneral when in an instance (auto-removes you from oqgeneral when in an instance)
+        UPD: ban detection will display to log as well as general chat
+        UPD: updated various German translations (thanks Xingmao-Un'Goro EU !!)
+        UPD: miscellaneous groups will auto-set loot to 'group loot'
+        add: battle.net required shade now warns user if bnet is down (oqueue requires bnet; shade blocks main ui)
+        add: auto-decline any bnet friend requests that contain 'pvpbank.com' in the message
+        add: cmd-line option to toggle bnet (/oq toggle bnet)
+        add: invite-all cmdline and keybind option
+        add: find-premade list pause capability; holding 'shift' will now pause updates until released (thx TKlein!!)
+        add: oQueue will detect afk and leave oqgeneral and clear out your bnet broadcast msg so you stop receiving msgs; restarts when you come back
+
 v1.7.5  BUGFIX: recycled premade lines reset properly (no longer 'pending' on groups you didn't waitlist)
         UPD: extended cmdline option; /oq [show [btags [subtext]]]; '/oq show btags joe' shows all btags with 'joe' either in btag or note
         add: wait list and ban list sort order will now be remembered

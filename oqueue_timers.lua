@@ -121,7 +121,7 @@ function oq.timer_trigger( now )
       oq._timer_id = i ;
       local retOK, rc = pcall( v.func, arg1, v.arg2, v.arg3, v.arg4, v.arg5, v.arg6, v.arg7 ) ;
       if (retOK == true) then 
-        if (rc ~= nil) or (v.one_shot) then
+        if (rc ~= nil) or (v == nil) or (v.one_shot) or (v.dt == nil) or (v.dt == 0) then
           oq.timers[i] = tbl.delete( oq.timers[i] ) ;
         else
           v.error_cnt = nil ;

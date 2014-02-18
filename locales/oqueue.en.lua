@@ -21,9 +21,10 @@ end
 setmetatable(OQ._T, {__index=defaultFunc}) ;
 local L = OQ._T ;
 
-BINDING_HEADER_OQUEUE = "oQueue";
-BINDING_NAME_TOGGLE_OQUEUE = "Toggle oQueue";
-BINDING_NAME_AUTO_INSPECT  = "Auto Inspect";
+BINDING_HEADER_OQUEUE           = "oQueue";
+BINDING_NAME_TOGGLE_OQUEUE      = "Toggle oQueue";
+BINDING_NAME_AUTO_INSPECT       = "Auto Inspect";
+BINDING_NAME_WAITLIST_INVITEALL = "Invite All";
 
 OQ.TITLE_LEFT         = "oQueue v" ;
 OQ.TITLE_RIGHT        = " - Premade finder" ;

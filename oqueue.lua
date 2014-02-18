@@ -125,8 +125,8 @@ end
 
 local OQ_MAJOR                 = 1 ;
 local OQ_MINOR                 = 7 ;
-local OQ_REVISION              = 5 ;
-local OQ_BUILD                 = 175 ;
+local OQ_REVISION              = 6 ;
+local OQ_BUILD                 = 176 ;
 local OQ_SPECIAL_TAG           = "" ;
 local OQUEUE_VERSION           = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) ..".".. OQ_REVISION ;
 local OQUEUE_VERSION_SHORT     = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) .."".. OQ_REVISION ;
@@ -553,6 +553,7 @@ function oq.hook_options()
   oq.options[ "brb"         ] = oq.brb ;
   oq.options[ "cb"          ] = oq.color_blind_mode ;
   oq.options[ "check"       ] = oq.bn_force_verify ;
+  oq.options[ "clear"       ] = oq.cmdline_clear ;
   oq.options[ "cp"          ] = oq.toggle_class_portraits ;
   oq.options[ "debug"       ] = oq.debug_toggle ;
   oq.options[ "dip"         ] = oq.dip ; 
@@ -565,6 +566,7 @@ function oq.hook_options()
   oq.options[ "harddrop"    ] = oq.harddrop ; 
   oq.options[ "help"        ] = oq.usage ; 
   oq.options[ "id"          ] = oq.id_target ; 
+  oq.options[ "inviteall"   ] = oq.waitlist_invite_all ;
   oq.options[ "log"         ] = oq.log_cmdline ; 
   oq.options[ "lust"        ] = oq.last_lust ;   
   oq.options[ "mbsync"      ] = oq.mbsync ;
@@ -622,6 +624,17 @@ function oq.toggle_mini()
     OQ_toon.mini_hide = nil ;
     print( OQ.MINIMAP_SHOWN ) ;
   end
+end
+
+function oq.toggle_bnet()
+  if (oq._bnet_disabled) then
+    oq._bnet_disabled = nil ;
+    print( L["oqueue bnet connection: enabled"] ) ;
+  else
+    oq._bnet_disabled = 1 ;
+    print( L["oqueue bnet connection: disabled"] ) ;
+  end
+  oq.n_connections() ;
 end
 
 local function comma_value(n) -- credit http://richard.warburton.it
@@ -1636,7 +1649,7 @@ function oq.special_thanks()
   print( "Written by Tinystomper / Weegeezer of Magtheridon (aka 'tiny')" ) ;
   print( "Special thanks to Rathamus and the crazy late-nite people on wow public vent" ) ;
   print( "  -  weanii, oath, skitt, naynayz, pluurrr, erickah, sorina, mighty, milk (not! j/k)," ) ;
-  print( "  -  merrik, furry, rittenaur, shakem, cuthroat, staary, gumo, porf, pooz, pleb" ) ;
+  print( "  -  merrik, furry, rittenaur, shakem, cutthroat, staary, gumo, porf, pooz, pleb" ) ;
   print( "  -  celeste, snotmore, ubi, bosskiller, tann, mutilator, arrisa, traper, " ) ;
   print( "  -  and many, many more" ) ;
 end
@@ -1788,6 +1801,8 @@ function oq.toggle_option( opt )
     print( "   mini         toggle the minimap icon" ) ;    
   elseif (opt == "mini") then 
     oq.toggle_mini() ;
+  elseif (opt == "bnet") then 
+    oq.toggle_bnet() ;
   elseif (opt == "ads") then
     if (OQ_data.show_premade_ads == nil) or (OQ_data.show_premade_ads == 0) then
       OQ_data.show_premade_ads = 1 ;
@@ -1810,7 +1825,7 @@ function oq.timezone_adjust( opt )
     OQ_data.sk_next_update = oq.utc_time("pure") + 3*24*60*60 ;
     return ;
   end
-  local n = tonumber( opt or 0 ) ;
+  local n = tonumber( opt or 0 ) or 0 ;
   if (n == 0) then
     OQ_data.sk_adjust = 0 ;
     print( L["OQ: timezone adjustment cleared"] ) ;
@@ -1835,7 +1850,7 @@ function oq.leave_party()
   oq.raid_cleanup() ;
 end
 
-function oq.dip()
+function oq.dip( opt )
   local n_bnfriends = select( 1, BNGetNumFriends() )  ;
   if (n_bnfriends >= OQ_MAX_BNFRIENDS) then
     print( OQ_LILSKULL_ICON .." ".. string.format( OQ.NODIPFORYOU, OQ_MAX_BNFRIENDS ) ) ;
@@ -1846,6 +1861,14 @@ function oq.dip()
     return ;
   end
   _next_dip = now + OQ_DIP_GAP ;
+  
+  oq._dip_cnt = min( max( 0, tonumber(opt or "20") or 0 ), 50 ) ;
+  if (oq._dip_cnt < 1) then
+    print( string.format( L["invalid dip amount: %s"], tostring(oq._dip_cnt) ) ) ;
+    return ;
+  end
+  oq._dip_tm  = oq.utc_time() + 10 ; -- only valid for the next 10 seconds
+  print( string.format( L["dip max: %d"], oq._dip_cnt ) ) ;
   
   local msg_tok = "W".. oq.token_gen() ;
   oq.token_push( msg_tok ) ;
@@ -1968,10 +1991,18 @@ function oq.godark()
   oq.n_connections() ;
 end
 
+function oq.reset_stats()
+  oq.pkt_sent:reset() ;
+  oq.pkt_recv:reset() ;
+  oq.pkt_processed:reset() ;
+  oq.pkt_drift:reset() ;
+end
+
 function oq.oq_off() 
   OQ_toon.disabled = true ;
   oq.reset_bn_custom_msg() ;
   oq.turnon_CLEU_ifneeded() ;
+  oq.reset_stats() ;
   print( OQ.DISABLED ) ;
 end
 
@@ -2451,17 +2482,21 @@ function oq.dump_statistics()
   print( "  packets sent         : ".. oq.pkt_sent._cnt .." (".. string.format( "%5.3f", oq.pkt_sent._aps ) .." per sec)  ".. #oq.send_q .." q'd" ) ;
   print( "" ) ;
   
-  if (_oqgeneral_lockdown) then
-    if (_oqgeneral_count > 0) then
-      print( "  oqgeneral #: ".. _oqgeneral_count .."   channel over capacity.  restricted" ) ;
-    else
-      print( "  oqgeneral #: ".. _oqgeneral_count .."   restricted" ) ;
-    end
+  if (oq._isAfk) then
+    print( "  oqgeneral #:  |cFFFF8080player is AFK|r" ) ;
   else
-    if (_oqgeneral_count > MAX_OQGENERAL_TALKERS) then
-      print( "  oqgeneral #: ".. _oqgeneral_count .."   channel over capacity.  no restrictions" ) ;
+    if (_oqgeneral_lockdown) then
+      if (_oqgeneral_count > 0) then
+        print( "  oqgeneral #: ".. _oqgeneral_count .."   channel over capacity.  restricted" ) ;
+      else
+        print( "  oqgeneral #: ".. _oqgeneral_count .."   restricted" ) ;
+      end
     else
-      print( "  oqgeneral #: ".. _oqgeneral_count .."   no restrictions" ) ;
+      if (_oqgeneral_count > MAX_OQGENERAL_TALKERS) then
+        print( "  oqgeneral #: ".. _oqgeneral_count .."   channel over capacity.  no restrictions" ) ;
+      else
+        print( "  oqgeneral #: ".. _oqgeneral_count .."   no restrictions" ) ;
+      end
     end
   end
   print( "---" ) ;
@@ -2554,6 +2589,9 @@ end
 
 function oq.channel_join( chan_name, pword )
   local n = strlower( chan_name ) ;
+  if (n == "oqgeneral") and (oq._inside_instance) then
+    return ;
+  end
 
   JoinTemporaryChannel( n, pword ) ;
   local id, chname = GetChannelName( n ) ;
@@ -2662,21 +2700,21 @@ function oq.channel_say( chan_name, msg )
           OQ_TTL ..",".. 
           msg ;
   end
-  if ((n ~= nil) and (oq.channels[n] ~= nil)) then
+  if ((n ~= nil) and (oq.channels[n] ~= nil) and (oq._isAfk == nil)) then
     SendChatMessage( msg, "CHANNEL", nil, oq.channels[ n ].id ) ;
     oq.pkt_sent:inc() ;
   end
 end
 
 function oq.join_oq_general()
-  if (oq._banned) or (OQ_data.auto_join_oqgeneral == 0) then
+  if (oq._banned) or (OQ_data.auto_join_oqgeneral == 0) or (oq._inside_instance) then
     return ;
   end
   oq.channel_join( "OQGeneral" ) ;
 end
 
 function oq.oqgeneral_join()
-  if (oq._banned) or (OQ_data.auto_join_oqgeneral == 0) then
+  if (oq._banned) or (OQ_data.auto_join_oqgeneral == 0) or (oq._inside_instance) then
     return ;
   end
   oq.channel_join( "OQGeneral" ) ;
@@ -2713,7 +2751,7 @@ function oq.is_oqueue_msg( msg )
 end
 
 function oq.BNSendFriendInvite( id, msg, note, name_, realm_ )
-  if (id == nil) or (id == player_realid) or (id == "") then
+  if (id == nil) or (id == player_realid) or (id == "") or (oq._isAfk) then
     return ;
   end
   local pid, is_online = oq.is_bnfriend( id, name_, realm_ ) ;
@@ -2729,6 +2767,9 @@ function oq.BNSendFriendInvite( id, msg, note, name_, realm_ )
 end
 
 function oq.SendAddonMessage_now( channel, msg, type, to_name )
+  if (oq._isAfk) then  
+    return ;  
+  end
   SendAddonMessage( channel, msg, type, to_name ) ;
   oq.pkt_sent:inc() ;
 end
@@ -3277,7 +3318,6 @@ function oq.entering_bg()
   oq.utimer_stop_all() ; -- clear all timer bars
   oq.timer( "chk_bg_updates",  2, oq.utimer_check_bg_updates , true ) ; -- check towers and graveyards
   oq.timer( "flag_watcher"  ,  5, RequestBattlefieldScoreData, true ) ; -- requesting score info
-  oq.timer_oneshot( 5, oq.oqgeneral_leave ) ;
   StaticPopup_Hide("OQ_QueuePoppedMember") ;
   
   local s = oq.init_stats_data() ;
@@ -3427,7 +3467,6 @@ function oq.leaving_bg()
   oq.fog_clear() ;
   oq.timer_oneshot( 4.0, oq.cache_mmr_stats ) ; -- must open conquest tab to refresh mmr info
 --  oq.timer_oneshot( 5.0, oq.check_currency ) ;
-  oq.timer_oneshot( 5.0, oq.oqgeneral_join ) ;
   oq.timer( "flag_watcher"  ,  5, nil ) ;
   oq.timer( "chk_bg_updates",  2, nil ) ;
   _flags = nil ; -- clearing out score flags
@@ -3596,7 +3635,7 @@ function oq.battleground_spy( opt )
 end
 
 function oq.calc_pkt_stats()
-  if (oq.pkt_recv == nil) or (oq.pkt_processed == nil) or (oq.pkt_sent == nil) or (oq.send_q == nil) then
+  if (not OQTabPage5:IsVisible()) or (oq.pkt_recv == nil) or (oq.pkt_processed == nil) or (oq.pkt_sent == nil) or (oq.send_q == nil) then
     return ;
   end
   oq.tab5_oq_pktrecv     :SetText( string.format( "%7.2f", oq.pkt_recv._aps ) ) ;
@@ -3634,6 +3673,7 @@ function oq.check_bg_status()
     oq._instance_duration = 0 ;
     oq._boss_fight        = nil ;
     oq._wiped             = nil ;
+    oq.timer_oneshot( 5, oq.oqgeneral_leave ) ;
     if (oq._instance_type == "pvp") then
       oq.timer( "threat_update", 2.5, oq.threat_update , true ) ;
       oq.timer( "report_threat", 2.5, oq.report_threat , true ) ;
@@ -3657,6 +3697,7 @@ function oq.check_bg_status()
       oq._instance_end_tm   = oq.utc_time() ;
       oq._instance_duration = oq._instance_end_tm - oq._instance_tm ;
     end
+    oq.timer_oneshot( 5.0, oq.oqgeneral_join ) ;
     oq.timer_oneshot( 5.0, oq.check_currency ) ;
     oq.timer_oneshot( 3.0, oq.bg_cleanup ) ;
     oq.timer( "threat_update", 2.5, nil ) ;
@@ -5014,7 +5055,7 @@ function oq.raid_create()
   
   if (player_level < 10) then
     message( OQ.MSG_CANNOTCREATE_TOOLOW ) ;
-    return ;
+--    return ;
   end
 
   OQ_data.realid = player_realid ;
@@ -5270,7 +5311,7 @@ function oq.BNSendWhisper( pid, msg, name, realm )
 end
 
 function oq.BNSendWhisper_now( pid, msg, name, realm )
-  if (pid == 0) or (msg == nil) or (OQ_toon.disabled) then
+  if (pid == 0) or (msg == nil) or (OQ_toon.disabled) or (oq._isAfk) then
     return ;
   end
   if (name == nil) or (realm == nil) or (msg:find( ",".. OQ_FLD_TO ) ~= nil) then
@@ -5431,8 +5472,10 @@ function oq.whisper_msg( to_name, to_realm, msg, immediate )
   if (to_realm == player_realm) then
     if ((oq._sender == nil) or (oq._sender ~= to_name)) then
       if (immediate) then
-        SendAddonMessage( "OQ", msg, "WHISPER", to_name ) ;
-        oq.pkt_sent:inc() ;
+        if (oq._isAfk == nil) then
+          SendAddonMessage( "OQ", msg, "WHISPER", to_name ) ;
+          oq.pkt_sent:inc() ;
+        end
       else
         oq.SendAddonMessage( "OQ", msg, "WHISPER", to_name ) ;
       end
@@ -5704,7 +5747,8 @@ function oq.update_bn_friend_info( friendId )
     oq._banlist_detection[_f[3]] = now ;
     -- announce it no more then once every 5 seconds
     if (dt > 5) then
-      print( OQ_LILSKULL_ICON .." ".. string.format( L["Found oQ banned b.tag on your friends list.  removing: %s"], tostring(_f[3]) )) ;
+      oq.log( true, " ".. OQ_LILSKULL_ICON .." ".. L["Found oQ banned b.tag on your friends list"] ) ;
+      oq.log( true, " ".. OQ_LILSKULL_ICON .." ".. L["removing: "] .. tostring(_f[3]) ) ;
     end
     BNRemoveFriend( presenceID ) ; 
   else
@@ -5871,9 +5915,11 @@ function oq.get_nConnections()
   local cnt = 0 ;
   
   oq.bntoons() ;
-  for name,v in pairs(OQ_data.bn_friends) do
-    if (v.isOnline and (v.presenceID ~= 0) and v.oq_enabled) then
-      cnt = cnt + 1 ;
+  if (oq._bnet_disabled == nil) then
+    for name,v in pairs(OQ_data.bn_friends) do
+      if (v.isOnline and (v.presenceID ~= 0) and v.oq_enabled) then
+        cnt = cnt + 1 ;
+      end
     end
   end
   
@@ -6067,6 +6113,18 @@ end
 function oq.bn_force_verify()
   next_bn_check = 0 ; -- force the check
   oq.bntoons() ;  
+end
+
+function oq.cmdline_clear( opt )
+  if (opt == nil) then
+    print( L["please specify clear option"] ) ;
+  end
+  if (opt == "premades") then
+    oq.remove_all_premades() ;
+    return ;
+  end
+  print( string.format( L["unknown option (%s)"], tostring(opt) ) ) ;
+  print( L["  options: premades"] ) ;
 end
 
 function oq.remove_friend_by_pid( pid, btag, givenName, option, why )
@@ -6404,6 +6462,10 @@ function oq.party_announce( msg )
 end
 
 function oq.bg_announce( msg )
+  if (oq._isAfk) then  
+    return ;  
+  end
+
   local m = "OQ,".. 
             OQ_VER ..",".. 
             "W1,"..
@@ -6679,6 +6741,9 @@ end
 local _items = tbl.new() ;
 local _vips = tbl.new() ;
 function oq.reshuffle_premades() 
+  if (oq._scroll_paused) then
+    return ;
+  end
   local x, y, cx, cy ;
   x  = 15 ;
   y  = 10 ;
@@ -9504,6 +9569,36 @@ function oq.waitlist_vip_check( f, token, emphasis )
   end
 end
 
+function oq.toggle_raid_scroll( state )
+  if (state == 0) then
+    oq._scroll_paused = nil ;
+    oq.reshuffle_premades() ; -- force the reshuffle
+    oq.tab2_paused:SetText( "" ) ;
+  else
+    oq._scroll_paused = 1 ;
+    oq.tab2_paused:SetText( L["** PAUSED **"] ) ;
+  end
+end
+
+function oq.hook_modifier( f ) 
+  f:RegisterEvent("MODIFIER_STATE_CHANGED")
+  f:SetScript("OnEvent", function(self,event,...)
+                           if self[event] then
+                             return self[event](...)
+                           end
+              end) ;
+  function f.MODIFIER_STATE_CHANGED(...)
+    local key, state = ...
+    if (f:IsVisible()) and (key == "LSHIFT" or key == "RSHIFT") then
+      oq.toggle_raid_scroll( state ) ;
+    end
+  end
+end
+
+function oq.unhook_modifier( f ) 
+  f:UnregisterEvent("MODIFIER_STATE_CHANGED") ;
+end
+
 function oq.create_raid_listing( parent, x, y, cx, cy, token, type ) 
   oq.nlistings = oq.nlistings + 1 ;
   local i = 1 ;
@@ -10085,7 +10180,6 @@ function oq.on_btags( token, t1, t2, t3, t4, t5, t6 )
   local msg = OQ_HEADER ..",".. 
               OQ_VER ..","..
               "W1,0,mesh_tag,0" ;
-
   if (not oq.is_banned( t1 )) then
     oq.BNSendFriendInvite( t1, msg, "OQ,mesh node" ) ;
   end
@@ -10403,7 +10497,7 @@ function oq.create_bounty_board( parent )
   
   -- rewards
   y = d:GetHeight() - 200 ;
-  d._reward_l = oq.label( d, x, y, 100, OQ.BUTTON_SZ, "Rewards" ) ;
+  d._reward_l = oq.label( d, x, y, 100, OQ.BUTTON_SZ, L["Rewards"] ) ;
   d._reward_l:SetJustifyV( "BOTTOM" ) ;
   d._reward_l:SetJustifyH( "LEFT" ) ;
   d._reward_l:SetFont( OQ.FONT, 16 ) ;
@@ -10420,7 +10514,7 @@ function oq.create_bounty_board( parent )
 
   -- timeleft
   y = y + 35 ;
-  d._remaining_l = oq.label( d, x, y, 100, OQ.BUTTON_SZ, "Time left" ) ;
+  d._remaining_l = oq.label( d, x, y, 100, OQ.BUTTON_SZ, L["Time left"] ) ;
   d._remaining_l:SetJustifyV( "CENTER" ) ;
   d._remaining_l:SetJustifyH( "LEFT" ) ;
   d._remaining_l:SetFont( OQ.FONT, 16 ) ;
@@ -11199,7 +11293,7 @@ function oq.empty_bounty_board()
                       "<br/>"..
                       "<br/>"..
                       "<h1 align=\"center\">".. 
-                      "No Bounties Available".. 
+                      L["No Bounties Available"] .. 
                       "</h1>"..
                       "</body></html>" ) ;
 end
@@ -11230,7 +11324,7 @@ function oq.set_bounty_target( s, end_tm )
     bb._poster:SetText( "<html><body>"..
                         "<h3 align=\"right\">contract#".. s.id .."</h3>"..
                         "<h1>".. 
-                        "Target: ".. 
+                        L["Target: "].. 
                         "</h1><br/>"..
                         "<h2 align=\"center\">".. 
                         tostring(s.name)..
@@ -11249,7 +11343,7 @@ function oq.set_bounty_target( s, end_tm )
     bb._poster:SetText( "<html><body>"..
                         "<h3 align=\"right\">contract#".. s.id .."</h3>"..
                         "<h1>".. 
-                        "Target: ".. 
+                        L["Target: "].. 
                         "</h1>".. spacer ..
                         "<h2 align=\"center\">".. 
                         tostring(s.name)..
@@ -12110,7 +12204,7 @@ function oq.create_tab1_common( parent )
 
   -- raid notes
   y = parent:GetHeight() - cy*2 - 45 ;
-  oq.tab1_notes_label = oq.label( parent, x, y     , 100, 20, "notes:" ) ;
+  oq.tab1_notes_label = oq.label( parent, x, y     , 100, 20, L["notes:"] ) ;
   oq.tab1_notes       = oq.label( parent, x, y + 12, 285, cy*2 - 10, "" ) ;
   oq.tab1_notes:SetNonSpaceWrap(true) ;
   oq.tab1_notes_label:SetTextColor( 0.7, 0.7, 0.7, 1 ) ;
@@ -12495,6 +12589,11 @@ function oq.create_tab2()
   f:SetScript("OnClick", function(self) oq.sort_premades( "resil" ) ; end ) ;
   f = oq.click_label( parent, x, y,  45, cy, OQ.HDR_MMR           ) ;  x = x +  45 ;
   f:SetScript("OnClick", function(self) oq.sort_premades( "mmr" ) ; end ) ;
+
+  x = x + 10 ;
+  oq.tab2_paused = oq.label( parent, x, y, 150, cy, "" ) ; 
+  oq.tab2_paused:SetJustifyH("middle") ;
+  oq.hook_modifier( parent ) ; -- hooked to the main tab window
 
   x = parent:GetWidth() - 200 ;
   oq.tab2_nfriends = oq.label( parent, x, y, 150, cy, string.format( OQ.BNET_FRIENDS, 0 ) ) ; 
@@ -12955,8 +13054,8 @@ function oq.create_tab_banlist()
 end
 
 function oq.create_badtagbox( parent ) 
-  if (parent._banned) then
-    return parent._banned ;
+  if (parent._badtag) then
+    return parent._badtag ;
   end
   local pcx = parent:GetWidth() ;
   local pcy = parent:GetHeight() ;
@@ -13143,6 +13242,77 @@ function oq.create_begbox( parent )
   end
 
   parent._beg = f ;
+  return f ;
+end
+
+function oq.create_bnetdownbox( parent ) 
+  if (parent._bnetdown) then
+    return parent._bnetdown ;
+  end
+  local pcx = parent:GetWidth() ;
+  local pcy = parent:GetHeight() ;
+  local cx = floor(pcx/2) ;
+  local cy = floor(4*pcy/5) ;
+  local f = oq.panel( parent, "BnetDownBox", floor((pcx - cx)/2), floor((pcy - cy)/2), cx, cy) ;
+  if (oq.__backdrop07 == nil) then
+    oq.__backdrop07 = { bgFile="Interface/Tooltips/UI-Tooltip-Background", 
+                        edgeFile="Interface/Tooltips/UI-Tooltip-Border", 
+                        tile=true, tileSize = 16, edgeSize = 16,
+                        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+                      }
+  end
+  f:SetBackdrop( oq.__backdrop07 ) ;
+  f:SetBackdropColor( 0.2, 0.2, 0.2, 1.0 ) ;
+  f:SetAlpha( 1.0 ) ;
+
+  x = 30 ;
+  y = -40 ;
+  local msg = oq.CreateFrame( "SimpleHTML", "OQBnetDownPoster", f ) ;
+  msg:SetPoint( "TOPLEFT"    , x, y ) ;
+  msg:SetFont( OQ.FONT, 12 ) ;
+  msg:SetWidth ( cx - 2*x ) ;
+  msg:SetHeight( cy - 2*y ) ;
+  msg:SetFont        ( OQ.FONT, 14 ) ;
+  msg:SetTextColor   ( 136/256, 221/256, 221/256, 0.8 ) ;
+  
+  msg:SetFont        ( 'p', OQ.FONT, 14 ) ;
+  msg:SetTextColor   ( 'p', 225/256, 225/256, 225/256, 0.8 ) ;
+  
+  msg:SetFont        ( 'h1', OQ.FONT, 16 ) ;
+  msg:SetTextColor   ( 'h1', 221/256, 36/256, 36/256, 0.8 ) ;
+  
+  msg:SetFont        ( 'h2', OQ.FONT2, 36 ) ;
+  msg:SetShadowColor ( 'h2', 0, 0, 0, 1 ) ;
+  msg:SetShadowOffset( 'h2', 1, -1 ) ;
+  msg:SetTextColor   ( 'h2', 221/256, 36/256, 36/256, 0.8 ) ;
+  
+  msg:SetFont        ( 'h3', OQ.FONT, 22 ) ;
+  msg:SetShadowColor ( 'h3', 0, 0, 0, 1 ) ;
+  msg:SetShadowOffset( 'h3', 0, 0 ) ;
+  msg:SetTextColor   ( 'h3', 221/256, 36/256, 36/256, 0.8 ) ;
+
+  msg:SetText( L["<html><body>"..
+               "<h3 align=\"center\">Battle.Net is down</h3>".. 
+               "<br/>"..
+               "<p>oQueue will not function properly until Battle.net is restored. </p>"..
+               "<br/>  "..
+               "<p>If you're unable to resolve your issues, please jump into vent or check out the forums. </p>"..
+               "<br/>  "..
+               "<p>- tiny  </p>"..
+               "<br/>  "..
+               "<h1 align=\"left\">vent support</h1>".. 
+               "<p>wow.publicvent.org : 4135  room 0</p>"..
+               "<br/>"..
+               "<h1 align=\"left\">forums</h1>".. 
+               "<p>oq.publicvent.org/forums</p>"..
+               "<br/>"..
+               "</body></html>"]
+             ) ;
+  msg:Show() ;
+  
+  f.html = msg ;
+
+  parent._bnetdown = f ;
   return f ;
 end
 
@@ -13394,6 +13564,10 @@ end
 
 function oq.banned_shade()
   oq.shaded_dialog( oq.create_banbox( oq.create_ui_shade() ), true ) ;
+end
+
+function oq.bnet_down_shade()
+  oq.shaded_dialog( oq.create_bnetdownbox( oq.create_ui_shade() ), true ) ;
 end
 
 function oq.contribute_shade()
@@ -14144,7 +14318,7 @@ function oq.create_main_ui()
 end
 
 function oq.get_battle_tag()
-  if (not BNConnected()) then
+  if (BNConnected() == false) then
     local now = oq.utc_time() ;
     oq._bnetdown_error_cnt = (oq._bnetdown_error_cnt or 0) + 1 ;
     if (oq._bnetdown_error_cnt < 3) then
@@ -14152,7 +14326,7 @@ function oq.get_battle_tag()
       -- b.net could just glitch for a few seconds, allow for recovery
       return nil ;
     end
-    if (oq._bnetdown_error_tm == nil) or ((now - oq._bnetdown_error_tm) > 90) then
+    if (oq._bnetdown_error_tm == nil) or ((now - oq._bnetdown_error_tm) > 150) then
       oq._bnetdown_error_tm = now ;
       print( OQ_REDX_ICON ..L[" Battle.net is currently down."] ) ;
       print( OQ_REDX_ICON ..L[" oQueue will not function properly until Battle.net is restored."] ) ;
@@ -14261,6 +14435,7 @@ function oq.populate_tab_setup()
   if (_oqgeneral_id) then
     SetSelectedDisplayChannel( _oqgeneral_id ) ;
   end
+  oq.calc_pkt_stats() ;
 end
 
 function oq.onhide_tab_setup()
@@ -14389,6 +14564,11 @@ function oq.on_bnet_friend_invite()
             oq.timer_oneshot( 1.5, oq.bn_check_online ) ;
             oq.timer_oneshot( 2, BNSetFriendNote, presenceId, _oq_note ) ;
           end
+        end
+      else
+        message = strlower(message) ;
+        if (message:find("pvpbank.com")) then
+          BNDeclineFriendInvite( presenceId ) ; 
         end
       end
     end
@@ -16111,9 +16291,6 @@ function oq.process_premade_info( raid_tok, raid_name, faction, level_range, ile
     oq.update_my_premade_line() ;
   end
   local rc = oq.announce_new_premade( raid_name, nil, raid_tok ) ;
-if (oq._watch) and (oq._watch == token) then
-print( "(".. tostring(raid_tok) ..") r[".. tostring(raid_name) .."]  new listing" ) ;
-end
 end
 
 function oq.on_premade_stats( raid_token, nMem, is_source, tm, status, nWait, type_ )
@@ -16617,6 +16794,22 @@ function oq.on_imesh( token, btag )
   if (pid ~= nil) then
     -- already friended
     return ;
+  end
+  local now = oq.utc_time() ;
+  if (oq._dip_tm) and (now < oq._dip_tm) then
+    if (oq._dip_cnt <= 0) then
+      return ; -- max'd out
+    end
+  elseif (oq._dip_tm) then
+    if ((now - oq._dip_tm) < OQ_DIP_GAP) then
+      return ; -- not ready for more
+    end
+  end  
+  if (oq._dip_cnt) then
+    oq._dip_cnt = oq._dip_cnt - 1 ;
+    if (oq._dip_cnt < 0) then
+      return ;
+    end
   end
   
   if (not oq.is_banned( btag )) then
@@ -17615,7 +17808,6 @@ function oq.on_scores( enc_data, sk_time, curr_oq_version, xdata, officers, xrea
   tbl.fill_match( _score_args, enc_data, "." ) ;
   sk_time = tonumber( sk_time or 0, 16 ) ;
   OQ_data._xrealm_arena = tonumber(xrealm_arena or 0) or 0 ;
-  
   local now = oq.utc_time() ;
   if (sig ~= "skaa004") then
     oq.debug_report( OQ_LILSKULL_ICON .." bad sig(".. tostring(sig) ..") (".. tostring(_source) ..".".. tostring(oq._sender) ..") TTL(".. tostring(_hop) ..") ".. tostring(abs(now - sk_time)) ) ;
@@ -17627,7 +17819,7 @@ function oq.on_scores( enc_data, sk_time, curr_oq_version, xdata, officers, xrea
   oq.check_drift(dt) ;
   if (dt > 30) then
     _ok2relay = nil ;  -- do not relay 
-    oq.debug_report( OQ_LILSKULL_ICON .." now: ".. tostring(now) .."  tm_diff: ".. tostring(abs(sk_time-now)) .." sender:".. tostring(oq._sender) .." score: ".. _msg:sub(1,30) ) ;
+    oq.debug_report( OQ_LILSKULL_ICON .." now: ".. tostring(now) .."  tm_diff: ".. tostring(abs(sk_time-now)) .." sender:".. tostring(oq._sender) .." hop: ".. tostring(_hop) .." score: ".. _msg:sub(1,30) ) ;
     return ;
   end
 
@@ -19733,7 +19925,7 @@ function oq.on_bn_event( ... )
   
   local msg        = _arg[1] ;
   local presenceID = _arg[13] ;
-  if (presenceID == nil) or (presenceID == 0) or ((msg == nil) or (msg == "")) then
+  if (presenceID == nil) or (presenceID == 0) or ((msg == nil) or (msg == "") or (oq._bnet_disabled)) then
     oq.post_process() ;
     return ;
   end
@@ -19980,7 +20172,7 @@ function oq.recover_premades()
 end
 
 function oq.process_msg( sender, msg )
-  if (msg:find(OQ.DRUNK)) then
+  if (msg:find(OQ.DRUNK)) or (oq._isAfk) then
     return ;
   end
 
@@ -20030,7 +20222,6 @@ function oq.process_msg( sender, msg )
     _ok2relay = nil ;
     _reason = "direct whisper" ;
   end
-
   _msg_token     = token ;
   _msg_id        = msg_id ;
   _received      = nil ;
@@ -20047,7 +20238,6 @@ function oq.process_msg( sender, msg )
       return ;
     end
   end
-  
   -- hang onto token to reduce echo
   -- note: hold token after sending to boss as multi-acct bnets will route the data back 
   --       and dont want to ignore it when it comes back
@@ -20073,7 +20263,7 @@ function oq.process_msg( sender, msg )
     end
   elseif ((_msg_type == 'A') or (_msg_type == 'W')) then
     _hop = tonumber(_vars[4]) ;
-    if (oq.proc[ msg_id ] ~= nil) and (_hop) and (_hop <= OQ_TTL) then
+    if (oq.proc[ msg_id ] ~= nil) and ((token == "W1") or ((_hop) and (_hop <= OQ_TTL))) then
       oq.proc[ msg_id ]( _vars[ 6], _vars[ 7], _vars[ 8], _vars[ 9], _vars[10], 
                          _vars[11], _vars[12], _vars[13], _vars[14], _vars[15], 
                          _vars[16], _vars[17], _vars[18], _vars[19], _vars[20],
@@ -20914,6 +21104,8 @@ function oq.on_party_members_changed()
         (oq.raid.type ~= OQ.TYPE_QUESTS) and
         (oq.raid.type ~= OQ.TYPE_RAID)) then
       SetLootMethod( "freeforall" ) ;
+    elseif ((oq.raid.raid_token ~= nil) and (oq.raid.type == OQ.TYPE_MISC)) then
+      SetLootMethod( "group" ) ;
     end
     if (oq.GetNumPartyMembers() == 2) and (oq.iam_raid_leader()) then
       -- make sure it's a raid if required
@@ -21519,6 +21711,7 @@ function oq.register_events()
 --  oq.msg_handler[ "PARTY_MEMBERS_CHANGED"         ] = oq.on_party_members_changed ;
 --  oq.msg_handler[ "PLAYER_ENTERING_BATTLEGROUND"  ] = oq.bg_start ;
   oq.msg_handler[ "PLAYER_DEAD"                   ] = oq.player_died ;
+  oq.msg_handler[ "PLAYER_FLAGS_CHANGED"          ] = oq.player_flags_changed ;
   oq.msg_handler[ "PLAYER_LEVEL_UP"               ] = oq.player_new_level ;
   oq.msg_handler[ "PLAYER_LOGOUT"                 ] = oq.on_logout ;
   oq.msg_handler[ "PLAYER_ENTERING_WORLD"         ] = oq.on_player_enter_world ;
@@ -21581,6 +21774,7 @@ function oq.register_events()
   oq.ui:RegisterEvent("PLAYER_EQUIPMENT_CHANGED") ;
   oq.ui:RegisterEvent("PLAYER_ENTERING_BATTLEGROUND") ;
   oq.ui:RegisterEvent("PLAYER_ENTERING_WORLD") ;
+  oq.ui:RegisterEvent("PLAYER_FLAGS_CHANGED") ;
   oq.ui:RegisterEvent("PLAYER_LEVEL_UP") ;
   oq.ui:RegisterEvent("PLAYER_LOGOUT") ;
   oq.ui:RegisterEvent("PLAYER_TARGET_CHANGED") ;
@@ -21635,6 +21829,20 @@ end
 
 function oq.player_died()
   oq.fog_clear() ;
+end
+
+function oq.player_flags_changed( unitid )
+  if (unitid == "player") then
+    if (UnitIsAFK("player")) and (oq._isAfk == nil) then
+      oq._isAfk = true ;
+      oq.oqgeneral_leave() ;
+      oq.oq_off() ;
+    elseif (oq._isAfk) then
+      oq._isAfk = nil ;
+      oq.oqgeneral_join() ;
+      oq.oq_on() ;
+    end
+  end
 end
 
 function oq.player_new_level()
@@ -23054,6 +23262,11 @@ function oq.ui_toggle()
   else
     oq.ui:Show() ;
     _ui_open = true ;
+    -- bnet down
+    if (BNConnected() == false) then
+      oq.bnet_down_shade() ;
+      return ;
+    end
     -- check bad btag
     if (oq.get_battle_tag() == nil) then
       oq.badtag_shade() ;
@@ -23064,13 +23277,14 @@ function oq.ui_toggle()
       oq.banned_shade() ;
       return ;
     end
+    -- update required
     if (oq._update_required) then
       oq.required_update_shade() ;
       return ;
     end
     -- initial prep
     if (OQ_data.auto_join_oqgeneral == 1) then
-      oq.channel_join( "OQGeneral" ) ;  -- just in case
+      oq.oqgeneral_join() ;
     end
     if (OQ_toon.disabled) then
       oq.oq_on() ;
@@ -23356,6 +23570,10 @@ end
 
 function OQ_UI_Toggle()
   oq.ui_toggle() ;
+end
+
+function OQ_Waitlist_InviteAll()
+  oq.waitlist_invite_all() ;
 end
 
 OQ.minimap_menu_options = { 

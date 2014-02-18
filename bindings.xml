@@ -5,4 +5,7 @@
   <Binding name="AUTO_INSPECT" header="OQUEUE">
     OQ_AutoInspect() ;
   </Binding>
+  <Binding name="WAITLIST_INVITEALL" header="OQUEUE">
+    OQ_Waitlist_InviteAll() ;
+  </Binding>
 </Bindings>

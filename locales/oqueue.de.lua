@@ -59,11 +59,17 @@ OQ.TT_RESIL = "Abh" ;
 OQ.TT_ILEVEL = "ilevel" ;
 OQ.TT_MAXHP = "max hp" ;
 OQ.TT_WINLOSS = "Sieg - Niederlage" ;
-OQ.TT_HKS = "totalle Ehrenhafte Siege" ;
+OQ.TT_HKS = "Ehrenhafte Siege - Gesamt" ;
 OQ.TT_OQVERSION = "Version" ;
 OQ.TT_TEARS = "Traenen" ;
 OQ.TT_PVPPOWER = "pvp Macht" ;
 OQ.TT_MMR = "rbg Wertung" ;
+OQ.AUTO_INSPECT       = "Auto inspect (Strg + linke Maus)" ;
+OQ.ANNOUNCE_CONTRACTS = "Sage Verträge an" ;
+OQ.SETUP_SHOUTCONTRACTS = "Sage Verträge an" ;
+OQ.SETUP_COLORBLIND   = "Farben Blind Support" ;
+OQ.SETUP_TIMERWIDTH   = "Timer breite" ;
+
 OQ.JOIN_QUEUE = "Warteschlange beitreten" ;
 OQ.LEAVE_QUEUE = "Warteschlange verlassen" ;
 OQ.LEAVE_QUEUE_BIG = "WARTESCHLANGE VERLASSEN" ;
@@ -126,7 +132,7 @@ OQ.SETUP_WHOPOPPED = "Kampfrausch Caster ansagen" ;
 OQ.SETUP_GARBAGE = "Garbage collection (30 sec intervals)" ;
 OQ.SETUP_SHOUTKBS = "Todesstoesse ansagen" ;
 OQ.SETUP_SHOUTCAPS = "BG Aufgaben ansagen" ;
-OQ.SETUP_SHOUTADS = "Premades ansagen" ;
+OQ.SETUP_SHOUTADS = "Verkünde Premades" ; -- "Premades ansagen" ;
 
 OQ.SETUP_AUTOACCEPT_MESH_REQ = "Auto accept b-tag mesh requests" ; --dunno
 OQ.SETUP_ANNOUNCE_RAGEQUIT = "Rage-Quitter bekannt geben" ;
@@ -417,5 +423,9 @@ OQ.BG_ROLES["SHAMAN"      ] = SHAMAN ;
 OQ.BG_ROLES["WARLOCK"     ] = WARLOCK ;
 OQ.BG_ROLES["WARRIOR"     ] = WARRIOR ;
 
-
+L["No Bounties Available"] = "Keine Kopfgelder vorhanden" ;
+L["notes:"] = "notizen:" ;
+L["Target: "] = "Ziel" ;
+L["Rewards"] = "Belohnung" ;
+L["Time left"] = "Zeit Übrig" ;
 
