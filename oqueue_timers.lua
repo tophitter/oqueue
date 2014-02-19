@@ -113,7 +113,7 @@ function oq.timer_trigger( now )
   end
   oq.next_timer_cycle = now + oq.timer_slice ;
   for i,v in pairs( oq.timers ) do
-    if (v.tm < now) then
+    if (v.tm) and (v.tm < now) then
       local arg1 = v.arg1 ;
       if (arg1 == nil) or (arg1 == "#now") then
         arg1 = now ;

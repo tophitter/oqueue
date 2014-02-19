@@ -1,5 +1,10 @@
 ﻿change.log for oQueue
 
+v1.7.7  ** mandatory update **    (blizz api changes and oqueue protocol updates)
+        REM: broadcast msg will no longer be needed for (OQ) friend discovery 
+        UPD: msgs now sent thru bnet addon channel instead of chat channels
+        UPD: oqgeneral changed to oqrealmchannel to separate the old protocol users from the new
+
 v1.7.6  BUGFIX: empty leaderxp handled
         BUGFIX: find-mesh handling error fixed
         UPD: updated entering and leaving oqgeneral when in an instance (auto-removes you from oqgeneral when in an instance)

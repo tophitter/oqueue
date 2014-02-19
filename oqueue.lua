@@ -125,14 +125,14 @@ end
 
 local OQ_MAJOR                 = 1 ;
 local OQ_MINOR                 = 7 ;
-local OQ_REVISION              = 6 ;
-local OQ_BUILD                 = 176 ;
+local OQ_REVISION              = 7 ;
+local OQ_BUILD                 = 177 ;
 local OQ_SPECIAL_TAG           = "" ;
 local OQUEUE_VERSION           = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) ..".".. OQ_REVISION ;
 local OQUEUE_VERSION_SHORT     = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) .."".. OQ_REVISION ;
 local OQ_VERSION               = tostring(OQ_MAJOR) .."".. tostring(OQ_MINOR) .."".. tostring(OQ_REVISION) ;
 local OQ_VER_STR               = OQUEUE_VERSION ;
-local OQ_VER                   = "1A"  ;  -- just removing the dot
+local OQ_VER                   = "1B"  ;  -- just removing the dot
 local OQSK_VER                 = "0C"  ;  
 local OQSK_HEADER              = "OQSK" ;
 local OQ_NOTIFICATION_CYCLE    = 2 * 60 * 60 ; -- every 2 hrs
@@ -150,6 +150,7 @@ local OQ_MSGHEADER             = OQ_HEADER .."," ;
 local OQ_FLD_TO                = "#to:" ;
 local OQ_FLD_FROM              = "#fr:" ;
 local OQ_FLD_REALM             = "#rlm:" ;
+local OQ_REALM_CHANNEL         = "oqrealmchannel" ;
 local OQ_TTL                   = 4 ;
 local OQ_PREMADE_STAT_LIFETIME = 5*60 ; -- 5 minutes
 local OQ_GROUP_TIMEOUT         = 2*60 ; -- 2 minutes (matches raid-timeout) if no response will remove group 
@@ -355,8 +356,6 @@ end
 -------------------------------------------------------------------------------
 --   local defines
 -------------------------------------------------------------------------------
-oq.old_bncustommsg        = nil ;
-oq.old_bn_msg             = nil ;
 oq.WhoPoppedList_Ids = 
 {
   [ 2825] = GetSpellInfo(2825),
@@ -438,57 +437,40 @@ OQ.ICON_COORDS = {
 
 -------------------------------------------------------------------------------
 local OQ_versions = 
-{ [ "1.5.0"    ] = 28,
-  [ "1.5.1"    ] = 29,
-  [ "1.5.2"    ] = 30,
-  [ "1.5.3"    ] = 31,
-  [ "1.5.4"    ] = 32,
-  [ "1.5.5"    ] = 33,
-  [ "1.5.6"    ] = 34,
-  [ "1.5.7"    ] = 35,
-  [ "1.5.8"    ] = 36,
-  [ "1.5.9"    ] = 37,
-  [ "1.6.0"    ] = 39,
-  [ "1.6.1"    ] = 40,
-  [ "1.6.2"    ] = 41,
-  [ "1.6.3"    ] = 42,
-  [ "1.6.4"    ] = 43,
-  [ "1.6.5"    ] = 44,
-  [ "1.6.6"    ] = 45,
-  [ "1.6.7"    ] = 46,
-  [ "1.6.8"    ] = 47,
-  [ "1.6.9"    ] = 48,
-  [ "1.7.0"    ] = 49,
-  [ "1.7.1"    ] =  2,
-  [ "1.7.2"    ] =  3,
-  [ "1.7.3"    ] =  4,
-  [ "1.7.4"    ] =  5,
-  [ "1.7.5"    ] =  6,
-  [ "1.7.6"    ] =  7,
-  [ "1.7.7"    ] =  8,
-  [ "1.7.8"    ] =  9,
-  [ "1.7.9"    ] = 10,
-  [ "1.8.0"    ] = 50,
-  [ "1.8.1"    ] = 51,
-  [ "1.8.2"    ] = 52,
-  [ "1.8.3"    ] = 53,
-  [ "1.8.4"    ] = 54,
-  [ "1.8.5"    ] = 55,
-  [ "1.8.6"    ] = 56,
-  [ "1.8.7"    ] = 57,
-  [ "1.8.8"    ] = 58,
-  [ "1.8.9"    ] = 59,
-  [ "1.9.0"    ] = 60,
-  [ "1.9.1"    ] =  1,
-  [ "1.9.2"    ] = 11,
-  [ "1.9.3"    ] = 12,
-  [ "1.9.4"    ] = 13,
-  [ "1.9.5"    ] = 14,
-  [ "1.9.6"    ] = 15,
-  [ "1.9.7"    ] = 16,
-  [ "1.9.8"    ] = 17,
-  [ "1.9.9"    ] = 18,
-  [ "2.0.0"    ] = 19,
+{ [ "1.7.7"    ] =  1,
+  [ "1.7.8"    ] =  2,
+  [ "1.7.9"    ] =  3,
+  [ "1.8.0"    ] =  4,
+  [ "1.8.1"    ] =  5,
+  [ "1.8.2"    ] =  6,
+  [ "1.8.3"    ] =  7,
+  [ "1.8.4"    ] =  8,
+  [ "1.8.5"    ] =  9,
+  [ "1.8.6"    ] = 10,
+  [ "1.8.7"    ] = 11,
+  [ "1.8.8"    ] = 12,
+  [ "1.8.9"    ] = 13,
+  [ "1.9.0"    ] = 14,
+  [ "1.9.1"    ] = 15,
+  [ "1.9.2"    ] = 16,
+  [ "1.9.3"    ] = 17,
+  [ "1.9.4"    ] = 18,
+  [ "1.9.5"    ] = 19, 
+  [ "1.9.6"    ] = 20,
+  [ "1.9.7"    ] = 21,
+  [ "1.9.8"    ] = 22,
+  [ "1.9.9"    ] = 23,
+  [ "2.0.0"    ] = 24,
+  [ "2.0.1"    ] = 25,
+  [ "2.0.2"    ] = 26,
+  [ "2.0.3"    ] = 27,
+  [ "2.0.4"    ] = 28,
+  [ "2.0.5"    ] = 29,
+  [ "2.0.6"    ] = 30,
+  [ "2.0.7"    ] = 31,
+  [ "2.0.8"    ] = 32,
+  [ "2.0.9"    ] = 33,
+  [ "2.1.0"    ] = 34,
 } ;
 
 function oq.get_version_id()
@@ -552,7 +534,7 @@ function oq.hook_options()
   oq.options[ "bnclear"     ] = oq.bn_clear ; 
   oq.options[ "brb"         ] = oq.brb ;
   oq.options[ "cb"          ] = oq.color_blind_mode ;
-  oq.options[ "check"       ] = oq.bn_force_verify ;
+  oq.options[ "check"       ] = oq.ping_the_world ;
   oq.options[ "clear"       ] = oq.cmdline_clear ;
   oq.options[ "cp"          ] = oq.toggle_class_portraits ;
   oq.options[ "debug"       ] = oq.debug_toggle ;
@@ -2000,7 +1982,6 @@ end
 
 function oq.oq_off() 
   OQ_toon.disabled = true ;
-  oq.reset_bn_custom_msg() ;
   oq.turnon_CLEU_ifneeded() ;
   oq.reset_stats() ;
   print( OQ.DISABLED ) ;
@@ -2008,7 +1989,6 @@ end
 
 function oq.oq_on() 
   OQ_toon.disabled = nil ;
-  oq.init_bn_custom_msg() ;
   oq.turnon_CLEU_ifneeded() ;
   print( OQ.ENABLED ) ;
 end
@@ -2534,16 +2514,15 @@ end
 function oq.show_bn_enabled() 
   local cnt = 0 ;
 
-  oq.bn_force_verify() ;
   print( "--[ OQ enabled ]--" ) ;
   for i,v in pairs(OQ_data.bn_friends) do
     if (v.isOnline and (v.oq_enabled or v.sk_enabled)) then
-      print( tostring(v.presenceID) ..".  ".. tostring(v.toonName) .."-".. tostring(v.realm) ) ;
+      print( tostring(v.toon_id) ..".  ".. tostring(v.toonName) .."-".. tostring(v.realm) ) ;
       cnt = cnt + 1 ;
     end
   end
   print( cnt .." bn friends OQ enabled" ) ;
-  print( tostring( oq.n_channel_members( "OQgeneral" ) ) .." OQ enabled locals" ) ;
+  print( tostring( oq.n_channel_members( OQ_REALM_CHANNEL ) ) .." OQ enabled locals" ) ;
   
   oq.n_connections() ;  
 end
@@ -2589,7 +2568,7 @@ end
 
 function oq.channel_join( chan_name, pword )
   local n = strlower( chan_name ) ;
-  if (n == "oqgeneral") and (oq._inside_instance) then
+  if (n == OQ_REALM_CHANNEL) and (oq._inside_instance) then
     return ;
   end
 
@@ -2617,7 +2596,7 @@ end
 
 local _names = tbl.new() ;
 function oq.check_oqgeneral_lockdown()
-  local n, index = oq.n_channel_members( "oqgeneral" ) ;
+  local n, index = oq.n_channel_members( OQ_REALM_CHANNEL ) ;
   _oqgeneral_count = n ;
   if (n < MAX_OQGENERAL_TALKERS) or (n == 0) then
     -- no restrictions
@@ -2710,21 +2689,21 @@ function oq.join_oq_general()
   if (oq._banned) or (OQ_data.auto_join_oqgeneral == 0) or (oq._inside_instance) then
     return ;
   end
-  oq.channel_join( "OQGeneral" ) ;
+  oq.channel_join( OQ_REALM_CHANNEL ) ;
 end
 
 function oq.oqgeneral_join()
   if (oq._banned) or (OQ_data.auto_join_oqgeneral == 0) or (oq._inside_instance) then
     return ;
   end
-  oq.channel_join( "OQGeneral" ) ;
-  oq.timer( "hook_roster_update"   ,  5, oq.hook_roster_update      , true, "OQGeneral" ) ; -- will repeat until channel joined
+  oq.channel_join( OQ_REALM_CHANNEL ) ;
+  oq.timer( "hook_roster_update"   ,  5, oq.hook_roster_update      , true, OQ_REALM_CHANNEL ) ; -- will repeat until channel joined
   oq.timer( "chk_OQGeneralLockdown", 30, oq.check_oqgeneral_lockdown, true ) ; -- will check capacity every 30 seconds
 end
 
 function oq.oqgeneral_leave()
   _oqgeneral_lockdown = true ; -- lock the door.  the restriction will life once joined and cleared
-  oq.channel_leave( "OQGeneral" ) ;
+  oq.channel_leave( OQ_REALM_CHANNEL ) ;
   oq.timer( "chk_OQGeneralLockdown", 0, nil ) ;
 end
 
@@ -2732,7 +2711,7 @@ function oq.channel_general( msg )
   if (_oqgeneral_lockdown) then
     return ; -- too many ppl in oqgeneral, voluntary mute engaged
   end
-  oq.channel_say( "OQGeneral", msg ) ;
+  oq.channel_say( OQ_REALM_CHANNEL, msg ) ;
 end
 
 function oq.iam_in_a_party()
@@ -5219,8 +5198,8 @@ end
 
 function oq.iknow_scorekeeper()
   for i,v in pairs(OQ_data.bn_friends) do
-    if ((v.presenceID ~= 0) and v.isOnline and v.sk_enabled) then
-      return v.presenceID ;
+    if ((v.toon_id ~= 0) and v.isOnline and v.sk_enabled) then
+      return v.toon_id ;
     end
   end
   return nil ;
@@ -5231,7 +5210,7 @@ function oq.bn_ok2send( msg, pid )
     return nil ;
   end
   for i,v in pairs(OQ_data.bn_friends) do
-    if ((v.presenceID == pid) and v.isOnline and v.oq_enabled) then
+    if ((v.toon_id == pid) and v.isOnline and v.oq_enabled) then
       return true ;
     end
   end
@@ -5315,20 +5294,19 @@ function oq.BNSendWhisper_now( pid, msg, name, realm )
     return ;
   end
   if (name == nil) or (realm == nil) or (msg:find( ",".. OQ_FLD_TO ) ~= nil) then
-    if (#msg > 254) then
-      msg = msg:sub(1,254) ;
+    if (#msg > 4078) then
+      msg = msg:sub(1,4078) ;
     end
-    BNSendWhisper( pid, msg ) ;
+--    BNSendWhisper( pid, msg ) ;
+    BNSendGameData( pid, "OQ", msg ) ;
     oq.pkt_sent:inc() ;
     return ;
   end
-  if (player_realm == nil) then
-    player_realm = oq.GetRealmName() ;
+  if (#msg > 4078) then
+    msg = msg:sub(1,4078) ;
   end
-  if (#msg > 254) then
-    msg = msg:sub(1,254) ;
-  end
-  BNSendWhisper( pid, msg ) ;  
+--  BNSendWhisper( pid, msg ) ;  
+  BNSendGameData( pid, "OQ", msg ) ;  
   oq.pkt_sent:inc() ;
 end
 
@@ -5705,17 +5683,8 @@ function oq.remove_one_mesh_node()
   return rc ;
 end
 
-function oq.on_bn_friend_info_changed( friendId )
-  if (friendId) then
-    oq.update_bn_friend_info( friendId ) ;
-  else
-    next_bn_check = 0 ;
-    oq.bntoons() ;
-  end
-end
-
 function oq.update_bn_friend_info( friendId )
-  if (OQ.BNET_CAPB4THECAP == nil) or (OQ.BNET_CAPB4THECAP < 90) then
+  if (OQ.BNET_CAPB4THECAP == nil) or (OQ.BNET_CAPB4THECAP < 90) or (friendId == nil) then
     return ;
   end
   tbl.fill( _f, BNGetFriendInfo( friendId ) ) ;
@@ -5723,21 +5692,20 @@ function oq.update_bn_friend_info( friendId )
     _f[3] = strlower(_f[3]) ;
   end
     
+  if (OQ_data.bn_friends == nil) then
+    OQ_data.bn_friends = tbl.new() ;
+  end
+  
   local presenceID = _f[1] ;
   local givenName  = _f[2] ;
 --    local surName    = _f[3] ;
   local client     = _f[7] ;
   local online     = _f[8] ;
   local broadcast  = _f[12] ;
-  if ((_f[4] == true) and (_f[3]) and (oq._bnet_friends[_f[3]] == nil)) then
-    -- new bnet friend
-    oq._bnet_friends[_f[3]] = true ;
-  end
   local p_faction = 0 ; -- 0 == horde, 1 == alliance, -1 == offline
   if (player_faction == "A") then
     p_faction = 1 ;
   end
- 
   if ((_f[4] == true) and (_f[3]) and oq.is_banned( _f[3], true )) then -- will only remove if on your LOCAL oq ban list
     local now = oq.utc_time() ;
     if (oq._banlist_detection == nil) then
@@ -5766,7 +5734,7 @@ function oq.update_bn_friend_info( friendId )
         end
 
         if (faction == p_faction) and (realmName) and (toon_client == "WoW") then
-          local name = toonName .."-".. realmName ;
+          local name = strlower(toonName .."-".. realmName) ;
           local friend = OQ_data.bn_friends[ name ] ;
           if (friend == nil) then
             OQ_data.bn_friends[ name ] = tbl.new() ;
@@ -5777,37 +5745,19 @@ function oq.update_bn_friend_info( friendId )
           friend.isOnline   = true ;
           friend.toonName   = toonName ;
           friend.realm      = realmName ;
-          friend.presenceID = toon_pid ;
-          friend.oq_enabled = nil ;
-          if (broadcast ~= nil) and (broadcast:sub(1, #OQ_BNHEADER ) == OQ_BNHEADER) then
-            friend.oq_enabled = true ;
-          end
-          if (broadcast ~= nil) and (broadcast:sub(1, #OQ_SKHEADER ) == OQ_SKHEADER) then
-            friend.sk_enabled = true ;
-          end
+          friend.toon_id    = toon_pid ;
         end
       end
     end  
   end
 end
 
-function oq.bntoons()
+function oq.check_cap_before_the_cap()
   local now = oq.utc_time() ;
-  if (next_bn_check > now) then
-    return ;
-  end
-  next_bn_check = now + 120 ; 
-  if (OQ_data.bn_friends == nil) then
-    OQ_data.bn_friends = tbl.new() ;
-  end
-  if (oq._bnet_friends == nil) then
-    oq._bnet_friends = tbl.new() ;
-  end
   local ntotal, nonline = BNGetNumFriends() ;
   if (ntotal) and (OQ.BNET_CAPB4THECAP) and (ntotal > OQ.BNET_CAPB4THECAP) then
     -- remove one
     if (oq.remove_one_mesh_node()) then
-      next_bn_check = now + 2 ; -- force recheck next time thru
       return ;
     else
       if (oq._warning_001 == nil) or ((now - oq._warning_001) > 120) then
@@ -5818,27 +5768,6 @@ function oq.bntoons()
       oq._warning_001 = now ;
     end
   end
-  
-  for i,v in pairs(OQ_data.bn_friends) do
-    v.presenceID = 0 ;
-    v.isOnline   = nil ;
-    v.oq_enabled = nil ;
-  end
-
-  for friendId=ntotal,1,-1 do
-    oq.update_bn_friend_info( friendId ) ;
-  end  
-  
-  -- clear out those that didn't update
-  for i,v in pairs(OQ_data.bn_friends) do
-    if (v.presenceID == 0) then
-      OQ_data.bn_friends[i] = tbl.delete( v ) ;
-    end
-  end
-
-  -- update ui elements  
-  oq._bnet_friends_initialized = true ;
-  oq.n_connections() ;
 end
 
 function oq.is_toon_friended( name, realm )
@@ -5913,18 +5842,16 @@ end
 
 function oq.get_nConnections()
   local cnt = 0 ;
-  
-  oq.bntoons() ;
   if (oq._bnet_disabled == nil) then
     for name,v in pairs(OQ_data.bn_friends) do
-      if (v.isOnline and (v.presenceID ~= 0) and v.oq_enabled) then
+      if (v.isOnline and (v.toon_id ~= 0) and v.oq_enabled) then
         cnt = cnt + 1 ;
       end
     end
   end
   
   -- update the label on tab 5
-  local nlocals = oq.n_channel_members( "OQgeneral" ) ;
+  local nlocals = oq.n_channel_members( OQ_REALM_CHANNEL ) ;
   if (nlocals > 0) then
     nlocals = nlocals - 1 ; -- subtract player
   end
@@ -5942,29 +5869,21 @@ function oq.n_connections()
 end
 
 function oq.bnpresence( name )
-  oq.bntoons() ;
   name = strlower(name) ; -- make sure
-  for i,v in pairs(OQ_data.bn_friends) do
-    if (name == strlower(i)) then
-      if (not v.isOnline) or ((not v.oq_enabled) and (not v.sk_enabled)) then
-        return 0 ;
-      else
-        return v.presenceID or 0 ;
-      end
+  local v = OQ_data.bn_friends[ strlower(name) ] ;
+  if (v) then
+    if (not v.isOnline) or ((not v.oq_enabled) and (not v.sk_enabled)) then
+      return 0 ;
+    else
+      return v.toon_id or 0 ;
     end
   end
   return 0 ;
-  
---  local friend = OQ_data.bn_friends[ name ] ;
---  if (friend == nil) or ((not friend.oq_enabled) and (not friend.sk_enabled)) or (not friend.isOnline) then
---    return 0 ;
---  end
---  return friend.presenceID or 0 ;
 end
 
 function oq.mbsync_toons( to_name )
   for ndx,friend in pairs( OQ_data.bn_friends ) do
-    if ((friend.presenceID ~= 0) and friend.isOnline and friend.oq_enabled) then
+    if ((friend.toon_id ~= 0) and friend.isOnline and friend.oq_enabled) then
       local m = "OQ,".. 
                 OQ_VER ..",".. 
                 "W1,"..
@@ -5999,21 +5918,22 @@ function oq.mbsync()
 end
 
 function oq.on_mbox_bn_enable( name, realm, is_enabled )
-  oq.bntoons() ;
   if (is_enabled == "0") then
     is_enabled = nil ;
   else
     is_enabled = true ;
   end
   realm = oq.realm_uncooked(realm) ;
-  local friend = OQ_data.bn_friends[ name .."-".. realm ] ;
+  local name_ndx = strlower(name .."-".. realm) ;
+  local friend = OQ_data.bn_friends[ name_ndx ] ;
   if (friend == nil) then
-    OQ_data.bn_friends[ name .."-".. realm ] = tbl.new() ;
-    friend = OQ_data.bn_friends[ name .."-".. realm ] ;
+    OQ_data.bn_friends[ name_ndx ] = tbl.new() ;
+    friend = OQ_data.bn_friends[ name_ndx ] ;
     friend.isOnline      = nil ;
     friend.toonName      = name ;
     friend.realm         = realm ;
-    friend.presenceID    = 0 ;
+    friend.pid           = 0 ;
+    friend.toon_id       = 0 ;
     return ;
   end
   friend.oq_enabled    = is_enabled ;
@@ -6080,8 +6000,7 @@ function oq.bn_echo_raid( msg )
 end
 
 function oq.bn_check_online()
-  next_bn_check = 0 ; -- force check
-  oq.bntoons() ; 
+  oq.check_cap_before_the_cap() ;
   oq.n_connections() ; -- should update the connection info on the find-premade tab
 end
 
@@ -6089,13 +6008,8 @@ function oq.set_bn_enabled( pid )
   -- find author in OQ_data.bn_friends and set him oq_enabled
   -- lot of work per msg.  how to reduce?  (another table??)
   -- 
-  oq.bntoons() ;
-  if (OQ_data.bn_friends == nil) then
-    return ;
-  end
-  
   for name,friend in pairs(OQ_data.bn_friends) do
-    if (friend.presenceID == pid) then
+    if (friend.toon_id == pid) then
       if (not friend.oq_enabled) then 
         oq.mbnotify_bn_enable( friend.toonName, friend.realm, 1 ) ;      
       end
@@ -6105,14 +6019,8 @@ function oq.set_bn_enabled( pid )
 end
 
 function oq.bn_clear()
-  tbl.clear( OQ_data.bn_friends ) ;
-  next_bn_check = 0 ;
-  oq.bntoons() ; -- have lost all OQ enabled friends
-end
-
-function oq.bn_force_verify()
-  next_bn_check = 0 ; -- force the check
-  oq.bntoons() ;  
+  tbl.clear( OQ_data.bn_friends, true ) ;
+  oq.ping_the_world() ;
 end
 
 function oq.cmdline_clear( opt )
@@ -6137,7 +6045,7 @@ function oq.remove_friend_by_pid( pid, btag, givenName, option, why )
   end
   if (OQ_data.bn_friends ~= nil) then
     for n,friend in pairs(OQ_data.bn_friends) do
-      if (friend.presenceID == pid) then
+      if (friend.pid == pid) then
         tbl.clear( OQ_data.bn_friends[ n ] ) ;
       end
     end
@@ -6243,7 +6151,7 @@ function oq.remove_OQadded_bn_friends( option )
 end
 
 function oq.is_enabled(toonName, realm)
-  local n = toonName .."-".. realm ;
+  local n = strlower(toonName .."-".. realm) ;
   if (OQ_data.bn_friends[ n ] == nil) then
     return nil ;
   end
@@ -6329,7 +6237,7 @@ function oq.announce_relay( m, insure )
     return ;
   end
   -- send to general channel
-  if (_inc_channel ~= "oqgeneral") and (oq._banned == nil) then
+  if (_inc_channel ~= OQ_REALM_CHANNEL) and (oq._banned == nil) then
     oq.channel_general( m ) ;
   end
 
@@ -6347,10 +6255,6 @@ end
 local _tags   = tbl.new() ;
 local _realms = tbl.new() ;
 function oq.bnfriends_relay( m, insure )
-  oq.bntoons() ; -- just incase the information has changed 
-  if (OQ_data.bn_friends == nil) then
-    return ;
-  end
   local dt = 0.1 ;
   tbl.clear( _tags ) ;
   tbl.clear( _realms ) ;
@@ -6366,9 +6270,9 @@ function oq.bnfriends_relay( m, insure )
   if (cnt <= OQ_MAX_RELAY_REALMS) then
     for i,v in pairs(_tags) do
       if (insure) then
-        oq.BNSendWhisper_now( v.presenceID, m, v.toonName, v.realm ) ;
+        oq.BNSendWhisper_now( v.toon_id, m, v.toonName, v.realm ) ;
       else
-        oq.BNSendWhisper( v.presenceID, m, v.toonName, v.realm ) ;
+        oq.BNSendWhisper( v.toon_id, m, v.toonName, v.realm ) ;
       end
     end
   else
@@ -6381,9 +6285,9 @@ function oq.bnfriends_relay( m, insure )
         i = i + 1 ;
         _names[v.toonName] = true ;
         if (insure) then
-          oq.BNSendWhisper_now( v.presenceID, m, v.toonName, v.realm ) ;
+          oq.BNSendWhisper_now( v.toon_id, m, v.toonName, v.realm ) ;
         else
-          oq.BNSendWhisper( v.presenceID, m, v.toonName, v.realm ) ;
+          oq.BNSendWhisper( v.toon_id, m, v.toonName, v.realm ) ;
         end
       end
     end
@@ -6588,6 +6492,11 @@ function oq.raid_ping_ack( tok, tm )
 end
 
 function oq.ping_toon( toon )
+  if (toon == nil) then
+    oq.ping_the_world() ;
+    return ;
+  end
+  
   local name = toon ;
   local realm = player_realm ;
   if (toon:find("-")) then
@@ -14837,7 +14746,7 @@ function oq.on_proxy_invite( group_id, slot_, enc_data_, req_token_ )
   if (not oq.iam_party_leader()) or (group_id == nil) or (group_id ~= my_group) then
     return ;
   end
-  if (oq.raid.raid_token == nil) or (_source == "bnfinvite") or (_source == "oqgeneral") or (_source == "party") then
+  if (oq.raid.raid_token == nil) or (_source == "bnfinvite") or (_source == OQ_REALM_CHANNEL) or (_source == "party") then
     return ;
   end
   if (not oq.iam_raid_leader()) and (oq.raid.type ~= OQ.TYPE_BG) then
@@ -14994,13 +14903,12 @@ function oq.bn_realfriend_invite( name, realm, rid, extra_note )
     return ;
   end
   
-  oq.bntoons() ;
-  local friend = OQ_data.bn_friends[ tostring(name) .."-".. tostring(realm) ] ;
+  local friend = OQ_data.bn_friends[ strlower(tostring(name) .."-".. tostring(realm)) ] ;
   if (friend ~= nil) and friend.isOnline and friend.oq_enabled then
     -- won't try to add if friended at all.  oq enabled or not
     return ;
   end
-  if (friend ~= nil) and (friend.presenceId == 0) then
+  if (friend ~= nil) and (friend.toon_id == 0) then
     return ;
   end
   
@@ -15015,12 +14923,11 @@ function oq.bn_realfriend_invite( name, realm, rid, extra_note )
 end
 
 function oq.set_note_if_null( name, realm, note )
-  oq.bntoons() ;
-  local friend = OQ_data.bn_friends[ tostring(name) .."-".. tostring(realm) ] ;
+  local friend = OQ_data.bn_friends[ strlower(tostring(name) .."-".. tostring(realm)) ] ;
   if (friend == nil) or (not friend.isOnline) then
     return ;
   end
-  local pid = friend.presenceID or 0 ;
+  local pid = friend.pid or 0 ;
   if (oq.bnfriend_note( pid ) == nil) then
     BNSetFriendNote( pid, note ) ;
   end
@@ -16040,7 +15947,7 @@ end
 
 OQ.MAX_ORIGINALS = 5 ;
 function oq.bad_source(raid_tok)
-  if ((_source ~= "oqgeneral") and (_source ~= "addon")) or (_hop < OQ_TTL) or (oq._sender == "#backup") then
+  if ((_source ~= OQ_REALM_CHANNEL) and (_source ~= "addon")) or (_hop < OQ_TTL) or (oq._sender == "#backup") then
     return ;
   end
   local now = oq.utc_time() ;
@@ -16760,7 +16667,7 @@ function oq.on_req_mesh( token )
   if (ntotal >= OQ_MAX_BNFRIENDS) then
     return ;
   end
-  if (_source ~= "oqgeneral") or (oq._sender == nil) then
+  if (_source ~= OQ_REALM_CHANNEL) or (oq._sender == nil) then
     -- only works locally
     return ;
   end
@@ -19739,6 +19646,8 @@ function oq.procs_init()
   oq.proc[ "promote"            ] = oq.on_promote ;
   oq.proc[ "proxy_invite"       ] = oq.on_proxy_invite ;
   oq.proc[ "proxy_target"       ] = oq.on_proxy_target ;
+  oq.proc[ "oq_user"            ] = oq.on_oq_user ;   
+  oq.proc[ "oq_user_ack"        ] = oq.on_oq_user ;   
   oq.proc[ "oq_version"         ] = oq.on_oq_version ;   
   oq.proc[ "queue_tm"           ] = oq.on_queue_tm ;
   oq.proc[ "raid_join"          ] = oq.on_raid_join ;
@@ -19772,6 +19681,8 @@ function oq.procs_init()
   oq.bg_msgids[ "top_dps_recvd"   ] = 1 ;
   oq.bg_msgids[ "top_heals_recvd" ] = 1 ;
   oq.bg_msgids[ "v8"              ] = 1 ;
+  oq.bg_msgids[ "oq_user"         ] = 1 ;   
+  oq.bg_msgids[ "oq_user_ack"     ] = 1 ;   
 
   -- remove raid-only procs
   oq.procs_no_raid() ;
@@ -19795,6 +19706,8 @@ function oq.procs_join_raid()
   oq.proc[ "leave_waitlist"        ] = oq.on_leave_waitlist ;  
   oq.proc[ "mbox_bn_enable"        ] = oq.on_mbox_bn_enable ;
   oq.proc[ "mesh_tag"              ] = oq.on_mesh_tag ;
+  oq.proc[ "oq_user"               ] = oq.on_oq_user ;   
+  oq.proc[ "oq_user_ack"           ] = oq.on_oq_user ;   
   oq.proc[ "oq_version"            ] = oq.on_oq_version ;   
   oq.proc[ "party_join"            ] = oq.on_party_join ;
   oq.proc[ "party_slot"            ] = oq.on_party_slot ;
@@ -19917,6 +19830,37 @@ function oq.on_addon_event( prefix, msg, channel, sender )
   oq.post_process() ;
 end
 
+--
+-- channel always WHISPER
+--
+function oq.on_bnet_addon_event( prefix, msg, channel, senderToonID )
+  if ((prefix ~= "OQ") or (sender == player_name)) or ((msg == nil) or (msg == "")) then
+    return ;
+  end
+  tbl.fill( _f, BNGetToonInfo(senderToonID)) ;
+  oq._sender_name   = _f[2] ;
+  oq._sender_realm  = _f[4] ;
+  oq._sender_toonid = senderToonID ;
+  _sender_pid       = senderToonID ;
+  local sender = oq._sender_name ;
+  if (oq._sender_realm ~= player_realm) then
+    sender = sender .."-".. oq._sender_realm ;
+  end
+  
+  if (oq.iam_party_leader() and (sender == oq.raid.leader) and (not OQ_toon.disabled)) then
+    -- from the leader and i'm party leader, send only to my party
+    oq.SendAddonMessage( "OQ", msg, "PARTY" ) ;
+  end
+
+  -- just process, do not send it on
+  _local_msg = true ;
+  _source    = "bnet" ;
+  _ok2relay  = nil ;
+  oq._sender = oq._sender_name .."-".. oq._sender_realm ;
+  oq.process_msg( oq._sender, msg ) ;  
+  oq.post_process() ;
+end
+
 function oq.on_bn_event( ... )
   if (OQ_toon.disabled or (not oq.loaded)) then
     return ;
@@ -19942,13 +19886,13 @@ function oq.on_bn_event( ... )
   local name = toonName .."-".. realmName ;
   
   oq._sender       = name ;
+  oq._sender_name  = toonName ;
   oq._sender_realm = realmName ;
   _sender_pid      = presenceID ;
   _source          = "bnet" ;
   _oq_msg          = nil ;
   _ok2relay        = 1 ; 
   
-  oq.check_if_new( presenceID, toonName, realmName ) ;
   oq.process_msg( name, msg ) ;  
   oq.post_process() ;
 end
@@ -19966,10 +19910,10 @@ function oq.on_channel_msg( ... )
     oq.post_process() ;
     return ;
   end
-  if (chan_name == "oqgeneral") then
-    _inc_channel = "oqgeneral" ;
+  if (chan_name == OQ_REALM_CHANNEL) then
+    _inc_channel = OQ_REALM_CHANNEL ;
     _local_msg   = true ;
-    _source      = "oqgeneral" ;
+    _source      = OQ_REALM_CHANNEL ;
     oq._sender   = _arg[2] ;
     _ok2relay    = 1 ; 
     oq.process_msg( _arg[2], _arg[1] ) ;
@@ -19992,7 +19936,7 @@ function oq.forward_msg( source, sender, msg_type, msg_id, msg )
   
   -- no relaying while in a BG.  BATTLEGROUND msgs are BG-wide, everything else stops here
   --
-  if (_msg_id == "p8") and (_inc_channel ~= "oqgeneral") and (my_slot ~= 1) and (oq._raid_token ~= oq.raid.raid_token) then
+  if (_msg_id == "p8") and (_inc_channel ~= OQ_REALM_CHANNEL) and (my_slot ~= 1) and (oq._raid_token ~= oq.raid.raid_token) then
     oq.channel_general( msg ) ;
   end
   if (_inside_bg) then
@@ -20053,6 +19997,149 @@ function oq.forward_msg( source, sender, msg_type, msg_id, msg )
   elseif (msg_type == 'R') then
     oq.forward_msg_raid( msg ) ;
   end
+end
+
+function oq.bnfriend_offline( pid ) 
+  tbl.fill( _f, BNGetFriendInfoByID( pid )) ;
+  local toon_id = _f[6] ;
+  if (toon_id) then
+    tbl.fill( _toon, BNGetToonInfo( toon_id )) ;
+    local toonName  = tostring(_toon[2]) ;
+    local realmName = tostring(_toon[4]) ;
+    local name_ndx = strlower(tostring(toonName) .."-".. tostring(realmName)) ;
+    if (OQ_data.bn_friends[name_ndx]) then
+        OQ_data.bn_friends[name_ndx] = tbl.delete( OQ_data.bn_friends[name_ndx] ) ;
+        oq.n_connections() ;
+        return ;
+    end
+  end
+  pid = tonumber(pid) ;
+  local found = nil ;
+  for i,v in pairs(OQ_data.bn_friends) do
+    if (v.pid == pid) then
+      OQ_data.bn_friends[i] = tbl.delete( OQ_data.bn_friends[i] ) ;
+      found = true ;
+    end
+  end
+  if (found) then
+    oq.n_connections() ;
+  end
+end
+
+function oq.bnfriend_online( pid ) 
+  tbl.fill( _f, BNGetFriendInfoByID( pid )) ;
+  local toon_id = _f[6] ;
+  tbl.fill( _toon, BNGetToonInfo( toon_id )) ;
+  local toonName  = tostring(_toon[2]) ;
+  local realmName = tostring(_toon[4]) ;
+  local name_ndx  = strlower(toonName .."-".. realmName) ;
+  if (OQ_data.bn_friends[name_ndx] == nil) then
+    OQ_data.bn_friends[name_ndx] = tbl.new() ;
+    oq.waitlist_check( toonName, realmName ) ; -- first time thru, see if they should be invited
+  end
+  local friend = OQ_data.bn_friends[ name_ndx ] ;
+  friend.isOnline   = true ;
+  friend.toonName   = toonName ;
+  friend.realm      = realmName ;
+  friend.pid        = tonumber(pid) ;
+  friend.toon_id    = tonumber(toon_id) ;
+  friend.oq_enabled = nil ;  
+end
+
+function oq.ping_the_world()
+  if (player_realid == nil) then
+    oq.get_battle_tag() ;
+    if (player_realid == nil) then
+      return ;
+    end
+  end
+  local p_faction = 0 ;
+  if (player_faction == "A") then
+    p_faction = 1 ;
+  end
+  local msg_tok = "W1" ;
+  local msg = "OQ,".. 
+              OQ_VER ..",".. 
+              msg_tok ..","..
+              "1,".. -- OQ_TTL ..",".. (only one hop... to the specified target)
+              "oq_user,".. 
+              player_name ..","..
+              player_realm ..","..
+              player_faction ..",".. 
+              player_realid ..",".. 
+              oq.encode_mime64_5digit( oq.utc_time() ) ;
+  local ntotal, nonline = BNGetNumFriends() ;
+  local cnt = 0 ;
+  for friendId=1,ntotal do
+    tbl.fill( _f, BNGetFriendInfo( friendId ) ) ;
+    local online     = _f[8] ;
+    local nToons = BNGetNumFriendToons( friendId ) ;
+    if (nToons > 0) and online then
+      for toonIndx=1,nToons do
+        tbl.fill( _toon, BNGetFriendToonInfo( friendId, toonIndx ) ) ;
+        local toonName    = _toon[2] ;
+        local toon_client = _toon[3] ;
+        local realmName   = _toon[4] ;
+        local toon_pid    = _toon[16] ;
+        local faction     = 1 ;
+        if (_toon[6] == "Horde") then
+          faction = 0 ;
+        end
+        if (p_faction == faction) and (toon_client == "WoW") then
+          oq.BNSendWhisper_now( toon_pid, msg, toonName, realmName ) ;
+          cnt = cnt + 1 ;
+        end
+      end
+    end
+  end
+  tbl.delete( _toon ) ;
+end
+
+function oq.send_oq_user_ack( toon_pid, toonName, realmName )
+  if (player_realid == nil) then
+    oq.get_battle_tag() ;
+    if (player_realid == nil) then
+      return ;
+    end
+  end
+  local msg_tok = "W1" ;
+  local msg = "OQ,".. 
+              OQ_VER ..",".. 
+              msg_tok ..","..
+              "1,".. -- OQ_TTL ..",".. (only one hop... to the specified target)
+              "oq_user_ack,".. 
+              player_name ..","..
+              player_realm ..","..
+              player_faction ..",".. 
+              player_realid ..",".. 
+              oq.encode_mime64_5digit( oq.utc_time() ) ..","..
+              "ack" ;
+  BNSendGameData( toon_pid, "OQ", msg ) ;
+  oq.pkt_sent:inc() ;
+--  oq.BNSendWhisper_now( toon_pid, msg, toonName, realmName ) ;
+end
+
+function oq.on_oq_user( toonName, realmName, faction, btag, ts_, is_ack )
+  if (faction ~= player_faction) or (_source ~= "bnet") then
+    return ;
+  end
+  local ts = oq.decode_mime64_digits(ts_) ;
+  local name_ndx = strlower(tostring(toonName) .."-".. tostring(realmName)) ;
+  local friend = OQ_data.bn_friends[ name_ndx ] ;
+  if (friend == nil) then
+    OQ_data.bn_friends[ name_ndx ] = tbl.new() ;
+    friend = OQ_data.bn_friends[ name_ndx ] ;
+    oq.waitlist_check( toonName, realmName ) ; -- first time thru, see if they should be invited
+  end
+  friend.isOnline   = true ;
+  friend.toonName   = toonName ;
+  friend.realm      = realmName ;
+  friend.toon_id    = oq._sender_toonid ; -- this message should be coming in on bnet
+  friend.oq_enabled = true ;
+  if (is_ack == nil) then
+    oq.send_oq_user_ack( oq._sender_toonid, toonName, realmName ) ;
+  end
+  oq.n_connections() ;
 end
 
 function oq.on_oq_version( version, build )
@@ -20154,9 +20241,9 @@ function oq.recover_premades()
         msg = v:sub(p2+1, -1) ;
       end
       if (tm) and (msg) and ((now - tm) < OQ_PREMADE_STAT_LIFETIME) then
-        _inc_channel = "oqgeneral" ;
+        _inc_channel = OQ_REALM_CHANNEL ;
         _local_msg   = true ;
-        _source      = "oqgeneral" ;
+        _source      = OQ_REALM_CHANNEL ;
         oq._sender   = "#backup" ;
         _ok2relay    = nil ; 
         oq.process_msg( oq._sender, msg ) ;
@@ -20202,6 +20289,8 @@ function oq.process_msg( sender, msg )
   _msg_type = token:sub(1,1) ;
   _oq_msg   = true ;
   
+  oq.check_if_new( _sender_pid, oq._sender_name, oq._sender_realm ) ;
+
   if (_msg_type == 'A') then
     atok = _vars[6] ; -- announce token
     if (not oq.atok_ok2process( atok )) then
@@ -20215,7 +20304,7 @@ function oq.process_msg( sender, msg )
   if ((token ~= "W1") and oq.token_was_seen( token )) then
     return ;
   end
-  if ((token == "W1") and (_source == "oqgeneral")) then
+  if ((token == "W1") and (_source == OQ_REALM_CHANNEL)) then
     -- these messages cannot come from OQgen
     return ;
   elseif (token == "W1") then
@@ -20277,7 +20366,7 @@ function oq.process_msg( sender, msg )
 
     -- rebuild msg for transport, incrementing #hops
     if ((_msg_type == 'A') and (_hop > 0) and (_hop <= OQ_TTL)) then
-      if (_source ~= "oqgeneral") then
+      if (_source ~= OQ_REALM_CHANNEL) then
         -- only decrement when crossing realms, not crossing the realm channel
         _vars[4] = _hop - 1 ;
       end
@@ -20314,7 +20403,9 @@ end
 
 function oq.post_process()
   oq._sender       = nil ;
+  oq._sender_name  = nil ;
   oq._sender_realm = nil ;
+  oq._sender_toonid= nil ;
   _sender_pid      = nil ;
   _local_msg       = nil ;
   _source          = nil ;
@@ -20587,75 +20678,31 @@ function oq.on_bg_event(event,...)
   end
 end
 
-function oq.bn_enabled( toonName, realm, faction, presenceID, isOnline, enabled )
-  local name = toonName .."-".. realm ;
-  local friend = OQ_data.bn_friends[name] ;
-  
-  if (friend == nil) then
-    OQ_data.bn_friends[name] = tbl.new() ;
-  elseif (friend.oq_enabled == enabled) then
-    friend.presenceID = presenceID ;
-    friend.isOnline   = isOnline ;
+function oq.check_if_new( toon_pid, toonName, realmName )
+  if (pid == nil) or (toonName == nil) or (realmName == nil) then
     return ;
   end
-  friend = OQ_data.bn_friends[name] ;
- 
-  friend.toonName      = toonName ;
-  friend.realm         = realm ;
-  friend.faction       = faction ;
-  friend.presenceID    = presenceID ;
-  friend.isOnline      = isOnline ;
-  if (enabled ~= "unk") then
-    friend.oq_enabled    = enabled ;
-    if (enabled) then
-      oq.mbnotify_bn_enable( friend.toonName, friend.realm, 1 ) ;
-    else
-      oq.mbnotify_bn_enable( friend.toonName, friend.realm, 0 ) ;
-    end
-  end
-  oq.n_connections() ;
-end
-
-function oq.isNewPresenceID( pid )
-  if (pid ~= nil) then
-    for i,v in pairs(OQ_data.bn_friends) do
-      if (v.presenceID == pid) then
-        return true ;
-      end
-    end
-  end
-  return nil ;
-end
-
-function oq.check_if_new( pid, toonName, realmName )
-  local name = toonName .."-".. realmName ;
-  local friend = OQ_data.bn_friends[ name ] ;
+  local name_ndx = strlower(toonName .."-".. realmName) ;
+  local friend = OQ_data.bn_friends[ name_ndx ] ;
   --
   -- only does the check if more then 30 seconds have passed or the name is new
   --
-  if (friend ~= nil) then
-    local now = oq.utc_time() ;
-    if (next_bn_check > now) then
-      return ;
-    end
-  else
-    OQ_data.bn_friends[ name ] = tbl.new() ;
-    friend = OQ_data.bn_friends[ name ] ;
-    friend.isOnline      = true ;
-    friend.toonName      = toonName ;
-    friend.realm         = realmName ;
-    friend.presenceID    = pid ;
+  if (friend) and (friend.isOnline) and (friend.oq_enabled) then
+    -- avoid updating the UI unnecessarily
+    friend.toon_id = toon_pid ; -- just to make sure
+    return ;
+  end
+
+  if (friend == nil) then
+    OQ_data.bn_friends[ name_ndx ] = tbl.new() ;
+    friend = OQ_data.bn_friends[ name_ndx ] ;
+    friend.toonName = toonName ;
+    friend.realm    = realmName ;
   end
  
-  friend.oq_enabled    = nil ;
-  tbl.fill( _f, BNGetFriendInfoByID( pid ) ) ;
-  local broadcast  = _f[12] ;
-  if (broadcast ~= nil) and (broadcast:sub(1, #OQ_BNHEADER ) == OQ_BNHEADER) then
-    friend.oq_enabled = true ;
-  end
-  if (broadcast ~= nil) and (broadcast:sub(1, #OQ_SKHEADER ) == OQ_SKHEADER) then
-    friend.sk_enabled = true ;
-  end
+  friend.isOnline      = true ;
+  friend.toon_id       = toon_pid ;
+  friend.oq_enabled    = true ;
   oq.n_connections() ;
 end
 
@@ -21154,66 +21201,6 @@ function oq.WorldMap_show(...)
   end
 end
 
--- hook for BNSetCustomMessage
-function oq.BNSetCustomMessage(...)
-  tbl.fill( _arg, ... ) ;  
-
-  if (oq.old_bncustommsg ~= nil) then
-    oq.old_bn_msg = _arg[1] or "" ;
-    if (oq.old_bn_msg:sub(1, #OQ_BNHEADER ) == OQ_BNHEADER) or
-       (oq.old_bn_msg:sub(1, #OQ_OLDBNHEADER ) == OQ_OLDBNHEADER) then
-      -- strip it
-      oq.old_bn_msg = oq.old_bn_msg:sub( #OQ_BNHEADER+1, -1 ) ;
-    end
-    if (oq.old_bncustommsg ~= oq.BNSetCustomMessage) then
-      oq.old_bncustommsg( OQ_BNHEADER .."".. oq.old_bn_msg ) ;
-    end
-  else
-  print( "b-net custom msg not available" ) ;
-  end
-end
-
-function oq.set_bn_msg_clear()
-  if (oq.old_bncustommsg ~= nil) and (oq.old_bn_msg ~= nil) then
-    oq.old_bncustommsg( oq.old_bn_msg ) ;
-  end
-end
-
-function oq.init_bn_custom_msg()
-  if (OQ_toon.disabled == true) then
-    return ;
-  end
-  if (BNSetCustomMessage ~= nil) and (oq.old_bncustommsg ~= BNSetCustomMessage) then
-    oq.old_bncustommsg = BNSetCustomMessage ;
-    BNSetCustomMessage = oq.BNSetCustomMessage ;
-  end
-  -- grab last msg and tack an [OQ] on the front
-  tbl.fill( _arg, BNGetInfo() ) ;
-  
---  pid, toonID, broadcast, bnetAFK, bnetDND  = BNGetInfo() ;
-  local broadcast = _arg[4] ;
-  -- pandaria update
-  if (broadcast ~= nil) then
-    broadcast = tostring(broadcast) ;
-  end
-  if (broadcast == nil) then
-    oq.BNSetCustomMessage( "" ) ;
-  elseif (broadcast:sub(1, #OQ_BNHEADER ) ~= OQ_BNHEADER) and (broadcast:sub(1, #OQ_SKHEADER ) ~= OQ_SKHEADER) then
-    oq.BNSetCustomMessage( broadcast ) ;
-  end
-  OQ_data["_" .. oq.encode_mime64_3digit(121705)] = tbl.size(dtp)*1000 + OQ_BUILD ;
-end
-
-function oq.reset_bn_custom_msg()
-  if (oq.old_bncustommsg == nil) then
-    return ;
-  end
-  BNSetCustomMessage = oq.old_bncustommsg ;
-  oq.old_bncustommsg = nil ;
-  BNSetCustomMessage( "" ) ; -- just clear it out completely (old msg was in 'oq.old_bn_msg')
-  oq.old_bn_msg = nil ;
-end
-
 function oq.on_channel_roster_update(id)
   if (_oqgeneral_id ~= nil) and (_oqgeneral_id == id) then
     oq.n_connections() ;
@@ -21678,20 +21665,23 @@ end
 -- triggered by bn friends going online/offline
 -- wait a half second to allow the data to populate before pulling
 --
-function oq.timer_bn_check_online()
-  oq.timer_oneshot( 0.5, oq.bn_check_online ) ;
+function oq.timer_bn_pingworld()
+  -- replacable timer to bundle events and minimize pings
+  -- bnet has a tendency to bounce on and offline when getting ddos'd.  try to avoid piling on
+  oq.timer( "ping_world", 5.0, oq.ping_the_world, nil ) ; 
 end
 
 function oq.register_events() 
 --  oq.create_timer() ;
   oq.msg_handler = tbl.new() ;
   oq.msg_handler[ "ADDON_LOADED"                  ] = oq.on_addon_loaded ;
-  oq.msg_handler[ "BN_CONNECTED"                  ] = oq.timer_bn_check_online ;
-  oq.msg_handler[ "BN_FRIEND_ACCOUNT_OFFLINE"     ] = oq.timer_bn_check_online ;
-  oq.msg_handler[ "BN_FRIEND_ACCOUNT_ONLINE"      ] = oq.timer_bn_check_online ;
-  oq.msg_handler[ "BN_FRIEND_INFO_CHANGED"        ] = oq.on_bn_friend_info_changed ;
+  oq.msg_handler[ "BN_CHAT_MSG_ADDON"             ] = oq.on_bnet_addon_event ;
+  oq.msg_handler[ "BN_CONNECTED"                  ] = oq.timer_bn_pingworld ;
+  oq.msg_handler[ "BN_FRIEND_ACCOUNT_OFFLINE"     ] = oq.bnfriend_offline ;
+  oq.msg_handler[ "BN_FRIEND_ACCOUNT_ONLINE"      ] = oq.bnfriend_online ; 
+  oq.msg_handler[ "BN_FRIEND_INFO_CHANGED"        ] = oq.update_bn_friend_info ;
   oq.msg_handler[ "BN_FRIEND_INVITE_ADDED"        ] = oq.on_bn_friend_invite_added ;
-  oq.msg_handler[ "BN_SELF_ONLINE"                ] = oq.timer_bn_check_online ;
+  oq.msg_handler[ "BN_SELF_ONLINE"                ] = oq.timer_bn_pingworld ;
   oq.msg_handler[ "CHAT_MSG_ADDON"                ] = oq.on_addon_event ;
   oq.msg_handler[ "CHAT_MSG_BG_SYSTEM_NEUTRAL"    ] = oq.on_bg_neutral_event ;
   oq.msg_handler[ "CHAT_MSG_BN_WHISPER"           ] = oq.on_bn_event ;
@@ -21747,6 +21737,7 @@ function oq.register_events()
   ------------------------------------------------------------------------
   oq.ui:RegisterEvent("ADDON_LOADED") ;
   oq.ui:RegisterEvent("PVPQUEUE_ANYWHERE_SHOW") ;
+  oq.ui:RegisterEvent("BN_CHAT_MSG_ADDON") ;
   oq.ui:RegisterEvent("BN_CONNECTED") ;
   oq.ui:RegisterEvent("BN_SELF_ONLINE") ;
   oq.ui:RegisterEvent("BN_FRIEND_ACCOUNT_OFFLINE") ;
@@ -21792,9 +21783,13 @@ function oq.register_events()
 end
 
 function oq.init_bnet_friends()
-  OQ_data.bn_friends = tbl.new() ;
-  if ((OQ_data ~= nil) and (OQ_data.btag_cache == nil)) then
+  if (OQ_data.btag_cache == nil) then
     OQ_data.btag_cache = tbl.new() ;
+  end
+  if (OQ_data.bn_friends) then
+    tbl.clear( OQ_data.bn_friends, true ) ;
+  else
+    OQ_data.bn_friends = tbl.new() ;
   end
 end
 
@@ -21832,7 +21827,7 @@ function oq.player_died()
 end
 
 function oq.player_flags_changed( unitid )
-  if (unitid == "player") then
+  if (unitid == "player") and (OQ._track_afk) then
     if (UnitIsAFK("player")) and (oq._isAfk == nil) then
       oq._isAfk = true ;
       oq.oqgeneral_leave() ;
@@ -22728,8 +22723,8 @@ function oq.on_init( now )
   oq.timer_oneshot(  4, oq.clean_karma_log             ) ;
   oq.timer_oneshot(  5, oq.advertise_my_raid           ) ;
   oq.timer_oneshot(  5, oq.delayed_button_load         ) ;
-  oq.timer_oneshot(  6, Register_Logout_Prehook        ) ;
-  oq.timer_oneshot(  7, oq.init_bn_custom_msg          ) ;
+--  oq.timer_oneshot(  6, Register_Logout_Prehook        ) ;
+  oq.timer_oneshot(  7, oq.ping_the_world              ) ;
   oq.timer_oneshot( 10, oq.bump_scorekeeper            ) ;
   
   if (OQ_data._helper_intro_shown == nil) then
@@ -22848,7 +22843,6 @@ end
 
 function OQPrehook_Exit(...)
   -- clear '(OQ)' from broadcast
-  oq.reset_bn_custom_msg() ;
   if (oq._old_exit) then
     oq.timer_oneshot( 1, oq._old_exit, ... ) ; -- give bnet some time to send the broadcast update
   end
@@ -22856,7 +22850,6 @@ end
 
 function OQPrehook_Logout(...)
   -- clear '(OQ)' from broadcast
-  oq.reset_bn_custom_msg() ;
   if (oq._old_logout) then
     oq.timer_oneshot( 1, oq._old_logout, ... ) ; -- give bnet some time to send the broadcast update
   end
@@ -22864,7 +22857,6 @@ end
 
 function OQPrehook_Reload(...)
   -- clear '(OQ)' from broadcast
-  oq.reset_bn_custom_msg() ;
   if (oq._old_reload) then
     oq._old_reload( ... ) ; 
   end
@@ -22879,11 +22871,8 @@ function oq.on_logout()
   -- note:  doesn't work, no msgs sent
   oq.clear_pending() ;
   
-  -- set the bn message without the OQ header
---  oq.reset_bn_custom_msg() ;
-  
   -- leave channels
-  oq.channel_leave( "OQGeneral" ) ;
+  oq.channel_leave( OQ_REALM_CHANNEL ) ;
   
   oq.log( nil, "logging out" ) ;
   -- hang onto group data if still in an OQ_group (may come back)
@@ -22942,6 +22931,7 @@ function oq.on_logout()
   OQ_data.bn_friends = nil ; -- clear out bnfriends; will reload next login
   OQ_data.reports    = nil ; -- old data; making sure it's cleaned out
   OQ_data.setup      = nil ; -- old data; making sure it's cleaned out
+  OQ_data.bn_friends = nil ; -- clean it out so we re-check upon login
 end
 
 function oq.attempt_group_recovery() 
