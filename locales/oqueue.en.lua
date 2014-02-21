@@ -389,7 +389,7 @@ OQ.CONTRIBUTION_DLG = { "",
                         "or drop by the forums:",
                         "beg.vent",
                         "",
-                        "Have a great holiday season!",
+                        "Have fun and have a great night!",
                         "",
                         "- tiny",
                       } ;

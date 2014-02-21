@@ -108,11 +108,11 @@ function Bogey:on_timer( now )
   local x = 0 ;
   local y = 0 ;
   for i,v in pairs(self._pings) do
-    if ((now - v.tm) < 5) then
+    if (tm) and ((now - v.tm) < 5) then
       n = n + 1 ;
       x = x + v.x ;
       y = y + v.y ;
-    else
+    elseif (tm) then
       self._pings[i] = tbl.delete( self._pings[i] ) ;
     end
   end
