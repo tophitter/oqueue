@@ -1,59 +1,60 @@
-﻿--[[
-  @file      oqueue.ru.lua
+﻿--[[ 
+  @file       oqueue.ru.lua
   @brief      localization for oqueue addon (russian)
 
-  @author    rmcinnis
-  @date      june 11, 2012
-  @par        copyright (c) 2012 Solid ICE Technologies, Inc.  All rights reserved.
+  @author     rmcinnis
+  @date       june 11, 2012
+  @par        Copyright (c) 2012 Solid ICE Technologies, Inc.  All rights reserved.
               this file may be distributed so long as it remains unaltered
               if this file is posted to a web site, credit must be given to me along with a link to my web page
-              no code in this file may be used in other works without expressed permission 
+              no code in this file may be used in other works without expressed permission  
 ]]--
 local addonName, OQ = ... ;
 
-OQ.TRANSLATED_BY["ruRU"] = "" ;
+OQ.TRANSLATED_BY["ruRU"] = "Efzet (Сибил, Azuregos EU)" ;
 if ( GetLocale() ~= "ruRU" ) then
   return ;
 end
-local L = OQ._T ; -- for literal string translations
-BINDING_HEADER_OQUEUE = "oQueue";
-BINDING_NAME_TOGGLE_OQUEUE = "Скрыть/показать oQueue";
-BINDING_NAME_AUTO_INSPECT  = "Автоматический осмотр";
+local L = OQ._T ;
+BINDING_HEADER_OQUEUE           = "oQueue";
+BINDING_NAME_TOGGLE_OQUEUE      = "Скрыть/показать oQueue";
+BINDING_NAME_AUTO_INSPECT       = "Автоматический осмотр";
+BINDING_NAME_WAITLIST_INVITEALL = "Пригласить всех";
 
 OQ.TITLE_LEFT         = "oQueue v" ;
-OQ.TITLE_RIGHT        = " - поиск премейдов" ;
+OQ.TITLE_RIGHT        = " - Поисковик премейдов" ;
 OQ.BNET_FRIENDS       = "%d друзей b-net" ;
 OQ.PREMADE            = "Премейд" ;
 OQ.PREMADE_TYPE       = "Тип премейда:" ;
-OQ.FINDPREMADE        = "Найти" ;
+OQ.FINDPREMADE        = "Поиск" ;
 OQ.CREATEPREMADE      = "Создать" ;
-OQ.CREATE_BUTTON      = "создать премейд" ;
-OQ.UPDATE_BUTTON      = "обновить премейд" ;
-OQ.WAITLIST           = "ожидание" ;
-OQ.HONOR_BUTTON       = "OQ премейд" ;
-OQ.SETUP              = "Настройка" ;
+OQ.CREATE_BUTTON      = "Создать премейд" ;
+OQ.UPDATE_BUTTON      = "Обновить премейд" ;
+OQ.WAITLIST           = "Очередь" ;
+OQ.HONOR_BUTTON       = "oQ премейд" ;
+OQ.SETUP              = "Настройки" ;
 OQ.PLEASE_SELECT_BG   = "Пожалуйста, выберите поле боя" ;
 OQ.BAD_REALID         = "Неправильный real-id или battle-tag.\n" ;
 OQ.QUEUE1_SELECTBG    = "<выберите поле боя>" ;
 OQ.NOLEADS_IN_RAID    = "В рейде нет лидеров групп" ;
 OQ.NOGROUPS_IN_RAID   = "Невозможно присоединить группу к рейду" ;
-OQ.BUT_INVITE         = "пригласить" ;
-OQ.BUT_GROUPLEAD      = "передать лидера" ;
-OQ.BUT_INVITEGROUP    = "группа (%d)" ;
-OQ.BUT_WAITLIST       = "в очередь" ;
-OQ.BUT_INGAME         = "в игре" ;
-OQ.BUT_PENDING        = "ожидание" ;
-OQ.BUT_INPROGRESS     = "в бою" ;
-OQ.BUT_NOTAVAILABLE   = "недоступно" ;
-OQ.BUT_FINDMESH       = "найти связи" ;
-OQ.BUT_SUBMIT2MESH    = "отправ. b-tag" ;
-OQ.BUT_PULL_BTAG      = "отозвать b-tag" ;
-OQ.BUT_BAN_BTAG       = "ввести b-tag" ;
-OQ.BUT_INVITE_ALL     = "пригласить" ;
-OQ.BUT_REMOVE_OFFLINE = "удалить оффлайн" ;
-OQ.TT_LEADER          = "лидер" ;
-OQ.TT_REALM           = "сервер" ;
-OQ.TT_BATTLEGROUP     = "боевая группа" ;
+OQ.BUT_INVITE         = "Пригласить" ;
+OQ.BUT_GROUPLEAD      = "Дать лидера" ;
+OQ.BUT_INVITEGROUP    = "Группа (%d)" ;
+OQ.BUT_WAITLIST       = "В очередь" ;
+OQ.BUT_INGAME         = "В игре" ;
+OQ.BUT_PENDING        = "Ожидание" ;
+OQ.BUT_INPROGRESS     = "В бою" ;
+OQ.BUT_NOTAVAILABLE   = "Недоступно" ;
+OQ.BUT_FINDMESH       = "Найти связи" ;
+OQ.BUT_SUBMIT2MESH    = "Отправ. b-tag" ;
+OQ.BUT_PULL_BTAG      = "Отозвать b-tag" ;
+OQ.BUT_BAN_BTAG       = "Ввести b-tag" ;
+OQ.BUT_INVITE_ALL     = "Пригласить" ;
+OQ.BUT_REMOVE_OFFLINE = "Удалить оффлайн" ;
+OQ.TT_LEADER          = "Лидер" ;
+OQ.TT_REALM           = "Игровой мир" ;
+OQ.TT_BATTLEGROUP     = "Боевая группа" ;
 OQ.TT_MEMBERS         = "в группе" ;
 OQ.TT_WAITLIST        = "в очереди" ;
 OQ.TT_RECORD          = "счет (победы - поражения)" ;
@@ -324,8 +325,8 @@ OQ.TT_PERSONAL        = "как участник" ;
 OQ.TT_ASLEAD          = "как лидер" ;
 OQ.AVG_ILEVEL         = "средний ИЛ: %d" ;
 OQ.ENCHANTED          = "Enchanted:" ;
-OQ.ENABLE_FOG         = "туман войны" ;
-OQ.AUTO_INSPECT       = "Автоматический осмотр (ctrl left-click)" ;
+OQ.ENABLE_FOG         = "Туман войны" ;
+OQ.AUTO_INSPECT       = "Автоматический осмотр (Ctrl+ЛКМ)" ;
 OQ.TIMELEFT           = "Осталось времени:" ;
 OQ.HORDE              = "Орда" ;
 OQ.ALLIANCE           = "Альянс" ;
@@ -367,8 +368,8 @@ OQ.TARGET_MARK        = "You've targeted a bounty target! ( contract#%s )" ;
 OQ.BOUNTY_TARGET      = "You've killed a bounty target! ( contract#%s )" ;
 OQ.DEATHMATCH_SCORE   = "Score!" ;
 OQ.FRIEND_REQUEST     = "%s-%s хочет быть вашим другом" ;
-OQ.ALREADY_FRIENDED   = "вы уже друзья по battle-net с %s" ;
-OQ.TT_FRIEND_REQUEST  = "запрос дружбы" ;
+OQ.ALREADY_FRIENDED   = "Вы уже друзья по battle-net с %s" ;
+OQ.TT_FRIEND_REQUEST  = "Запрос дружбы" ;
 OQ.DEATHMATCH_BEGINS  = "WPvP Death Match has begun!  Get to the spine in Pandaria and defend your pvp vendors!" ;
 OQ.WONTHEMATCH        = "побеждает!" ;
 OQ.MSG_MISSINGTYPE    = "Пожалуйста выберите тип премейда" ;
@@ -383,7 +384,7 @@ OQ.CONTRIBUTION_DLG = { "",
                         "or drop by the forums:",
                         "beg.vent",
                         "",
-                        "Have a great holiday season!",
+                        "Have a great fun and have a great night!",
                         "",
                         "- tiny",
                       } ;
@@ -516,14 +517,14 @@ OQ.BG_STAT_COLUMN = { [ "Баз атаковано"           ] = "База ат
                     } ;
 
 OQ.COLORBLINDSHADER = { [ 0 ] = "Отключено",
-                        [ 1 ] = "Protanopia",
-                        [ 2 ] = "Protanomaly",
-                        [ 3 ] = "Deuteranopia",
-                        [ 4 ] = "Deuteranomaly",
-                        [ 5 ] = "Tritanopia",
-                        [ 6 ] = "Tritanomaly",
-                        [ 7 ] = "Achromatopsia",
-                        [ 8 ] = "Achromatomaly",
+                        [ 1 ] = "Протанопия",
+                        [ 2 ] = "Протаномалия",
+                        [ 3 ] = "Дейтеранопия",
+                        [ 4 ] = "Дейтераномалия",
+                        [ 5 ] = "Тританопия",
+                        [ 6 ] = "Тританомалия",
+                        [ 7 ] = "Ахроматопсия",
+                        [ 8 ] = "Ахроматомалия",
                       } ;
 
 -- Class talent specs
@@ -573,6 +574,7 @@ local WARRIOR = { ["Оружие"]           = "Melee",
                   ["Защита"]           = "Tank",
                 } ; 
 
+OQ.BG_ROLES = {} ;
 OQ.BG_ROLES["DEATHKNIGHT" ] = DK ;
 OQ.BG_ROLES["DRUID"       ] = DRUID ;
 OQ.BG_ROLES["HUNTER"      ] = HUNTER ;
@@ -745,15 +747,15 @@ L["Chelon"                  ] = "Шелон" ;
 L["Spectral Pirate"         ] = "Призрачный пират" ;
 
 -- 
-L[" Battle.net is currently down."] = nil ;
-L[" oQueue will not function properly until Battle.net is restored."] = nil ;
-L[" Please set your battle-tag before using oQueue."] = nil ;
-L[" Your battle-tag can only be set via your WoW account page."] = nil ;
-L["NOTICE:  You've exceeded the cap before the cap(%s).  removed: %s"] = nil ;
-L["WARNING:  Your battle.net friends list has %s friends."] = nil ;
-L["WARNING:  You've exceeded the cap before the cap(%s)"] = nil ;
-L["WARNING:  No mesh nodes available for removal.  Please trim your b.net friends list"] = nil ;
-L["Found oQ banned b.tag on your friends list.  removing: %s"] = nil ;
+L[" Battle.net is currently down."] = "Battle.net временно недоступен." ;
+L[" oQueue will not function properly until Battle.net is restored."] = "oQueue не будет функционировать, пока Battle.net не восстановит работу." ;
+L[" Please set your battle-tag before using oQueue."] = "Пожалуйста, создайте Battle Tag прежде чем использовать oQueue." ;
+L[" Your battle-tag can only be set via your WoW account page."] = "Ваш Battle Tag может быть создан только на странице аккаунта." ;
+L["NOTICE:  You've exceeded the cap before the cap(%s).  removed: %s"] = "НАПОМИНАНИЕ: Вы превысили максимально возможное кол-во(%s). Удаление: %s" ;
+L["WARNING:  Your battle.net friends list has %s friends."] = "ВНИМАНИЕ: Ваш список друзей Battle.net содержит %s друзей." ;
+L["WARNING:  You've exceeded the cap before the cap(%s)"] = "ВНИМАНИЕ: Вы превысили максимально возможное кол-во(%s)." ;
+L["WARNING:  No mesh nodes available for removal.  Please trim your b.net friends list"] = "Нет доступных узлов связи для удаления. Проверьте список друзей Battle.net." ;
+L["Found oQ banned b.tag on your friends list.  removing: %s"] = "В вашем списке друзей найден заблокированный Battle Tag. Удаление: %s" ;
 L["<html><body>"..
   "<h2 align=\"left\">Where to get help</h2>".. 
   "<br/>"..

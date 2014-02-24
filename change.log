@@ -1,5 +1,19 @@
 ﻿change.log for oQueue
 
+v1.8.0  BUGFIX: nil raid stats check
+        BUGFIX: strlower check on leader names for sorting
+        BUGFIX: sanitized the premade filter to remove '%+-/^#<>=()[]{};,' (thx Adi!!)
+        BUGFIX: put in check for unknown level ranges (thx Adi!!)
+        BUGFIX: auto-remove temporary bnet friends working again (notes weren't setting)
+        BUGFIX: protected against nil comparison on ilevel 
+        UPD: Russian translation updated (thx Efzet!!)
+
+v1.7.9  *skipping to insure all beta testers get the update notice
+
+v1.7.8  ** mandatory update **    (blizz api changes and oqueue protocol updates)
+        BUGFIX: auto-leave group when invited fixed
+        UPD: chnaged to new blizz api: BNGetFriendInviteInfoByAddon
+
 v1.7.7  ** mandatory update **    (blizz api changes and oqueue protocol updates)
         REM: broadcast msg will no longer be needed for (OQ) friend discovery 
         UPD: msgs now sent thru bnet addon channel instead of chat channels

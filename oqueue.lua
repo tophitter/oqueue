@@ -134,9 +134,9 @@ end
 -------------------------------------------------------------------------------
 
 local OQ_MAJOR                 = 1 ;
-local OQ_MINOR                 = 7 ;
-local OQ_REVISION              = 8 ;
-local OQ_BUILD                 = 178 ;
+local OQ_MINOR                 = 8 ;
+local OQ_REVISION              = 0 ;
+local OQ_BUILD                 = 180 ;
 local OQ_SPECIAL_TAG           = "" ;
 local OQUEUE_VERSION           = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) ..".".. OQ_REVISION ;
 local OQUEUE_VERSION_SHORT     = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) .."".. OQ_REVISION ;
@@ -180,7 +180,8 @@ local OQ_TOTAL_BGS             = 10 ;
 local OQ_MIN_RUNAWAY_TM        = 40 ; 
 local OQ_MIN_CONNECTION        = 20 ;
 local OQ_MIN_BNET_CONNECTIONS  = 10 ;
-local OQ_FINDMESH_CD           = 7 ; -- seconds
+local OQ_INVITEALL_CD          = 5 ; -- seconds
+local OQ_FINDMESH_CD           = 15 ; -- seconds
 local OQ_CREATEPREMADE_CD      = 5 ; -- seconds
 local OQ_BTAG_SUBMIT_INTERVAL  = 4*24*60*60 ;
 local OQ_DIP_GAP               = 30 ; -- seconds
@@ -6610,19 +6611,19 @@ function oq.compare_premades(a,b)
     return (strlower(p1.name or "") < strlower(p2.name or "")) ;
   end
   if (OQ_data.premade_sort == "lead") then
-    return (p1.leader < p2.leader) ;
+    return (strlower(p1.leader or "") < strlower(p2.leader or "")) ;
   end
   if (OQ_data.premade_sort == "level") then
-    return (p1.level_range < p2.level_range) ;
+    return ((p1.level_range or "UNK") < (p2.level_range or "UNK")) ;
   end
   if (OQ_data.premade_sort == "ilevel") then
-    return (p1.min_ilevel < p2.min_ilevel) ;
+    return ((p1.min_ilevel or 0) < (p2.min_ilevel or 0)) ;
   end
   if (OQ_data.premade_sort == "resil") then
-    return (p1.min_resil < p2.min_resil) ;
+    return ((p1.min_resil or 0) < (p2.min_resil or 0)) ;
   end
   if (OQ_data.premade_sort == "mmr") then
-    return (p1.min_mmr < p2.min_mmr) ;
+    return ((p1.min_mmr or 0) < (p2.min_mmr or 0)) ;
   end
   return true ;
 end
@@ -7288,7 +7289,7 @@ function oq.get_player_level_id()
   if (player_level == 90) then
     return OQ.SHORT_LEVEL_RANGE[ "90" ] ;
   elseif (player_level < 10) then
-    return OQ.SHORT_LEVEL_RANGE[ "unavailable" ] ;
+    return OQ.SHORT_LEVEL_RANGE[ "UNK" ] ;
   end
   local minlevel = floor( player_level / 5) * 5 ;
   local maxlevel = floor((player_level + 5) / 5) * 5 - 1 ;
@@ -7821,20 +7822,18 @@ function oq.remove_temporary_bnfriend( name, realm )
     local client     = f[7] ;
     local online     = f[8] ;
     local noteText   = f[13] ;
-    if (noteText ~= nil) and (noteText:find( "OQ,G" ) == 1) then
-      local nToons = BNGetNumFriendToons( friendId ) ;
-      if (nToons > 0) and online then
-        for toonIndx=1,nToons do
-          tbl.fill( _toon, BNGetFriendToonInfo( friendId, toonIndx ) ) ;
-          local toonName    = strlower(_toon[2] or "") ;
-          local toon_client = _toon[3] ;
-          local realmName   = strlower(_toon[4] or "") ;
-          local toon_pid    = _toon[16] ;
+    local nToons = BNGetNumFriendToons( friendId ) ;
+    if (nToons > 0) and online then
+      for toonIndx=1,nToons do
+        tbl.fill( _toon, BNGetFriendToonInfo( friendId, toonIndx ) ) ;
+        local toonName    = strlower(_toon[2] or "") ;
+        local toon_client = _toon[3] ;
+        local realmName   = strlower(_toon[4] or "") ;
+        local toon_pid    = _toon[16] ;
           
-          if (toonName == name) and (realmName == realm) then
-            BNRemoveFriend(presenceID) ;
-            return ;
-          end
+        if ((toonName == name) and (realmName == realm)) and ((noteText == nil) or (noteText == "") or (noteText:find( "OQ,G" ) == 1)) then
+          BNRemoveFriend(presenceID) ;
+          return ;
         end
       end
     end
@@ -7853,7 +7852,7 @@ function oq.UninviteUnit( name )
   UninviteUnit( name ) ;
 end
 
-function oq.InviteUnit( name, realm, req_token )
+function oq.InviteUnit( name, realm, req_token, ok2remove )
   if (realm == nil) or (realm == player_realm) then
     InviteUnit( name ) ;
   else
@@ -7866,7 +7865,9 @@ function oq.InviteUnit( name, realm, req_token )
     oq.pending_invites[ key ] = tbl.delete( oq.pending_invites[ key ] ) ;
   end
   oq.timer( "briefing", 3.5, oq.brief_group_members, nil ) ;  -- one shot, but replaced if more members show
-  oq.timer_oneshot( 20, oq.remove_temporary_bnfriend, name, realm ) ;
+  if (ok2remove) then
+    oq.timer_oneshot( 20, oq.remove_temporary_bnfriend, name, realm ) ;
+  end
   next_invite_tm = 0 ; -- able to invite another player now
 end
 
@@ -11320,9 +11321,30 @@ function oq.toggle_filter( is_checked )
   end
 end
 
+function oq.sanitize_filter( txt ) 
+  txt = txt:gsub("%%", "") ;
+  txt = txt:gsub("+", "") ;
+  txt = txt:gsub("-", "") ;
+  txt = txt:gsub("/", "") ;
+  txt = txt:gsub("%^", "") ;
+  txt = txt:gsub("#", "") ;
+  txt = txt:gsub("<", "") ;
+  txt = txt:gsub(">", "") ;
+  txt = txt:gsub("=", "") ;
+  txt = txt:gsub("%(", "") ;
+  txt = txt:gsub('%)', "") ;
+  txt = txt:gsub("%[", "") ;
+  txt = txt:gsub("%]", "") ;
+  txt = txt:gsub("{", "") ;
+  txt = txt:gsub("}", "") ;
+  txt = txt:gsub(";", "") ;
+  txt = txt:gsub(",", "") ;
+  return txt ;
+end
+
 function oq.update_filter( txt )
-  oq._filter._text = txt ;
-  OQ_data._filter_text = txt ;
+  oq._filter._text = oq.sanitize_filter( txt ) ;
+  OQ_data._filter_text = oq._filter._text ;
   oq.reshuffle_premades() ;
 end
 
@@ -12700,7 +12722,7 @@ function oq.create_tab3()
 
   local minlevel, maxlevel = oq.get_player_level_range() ;
   if (minlevel == 0) then
-    txt = "unavailable" ;
+    txt = "UNK" ;
   elseif (minlevel == 90) then
     txt = "90" ;
   else
@@ -14496,7 +14518,7 @@ function oq.on_bnet_friend_invite()
             BNAcceptFriendInvite(presenceId) ;
             oq.set_bn_enabled( presenceId ) ;
             oq.timer_oneshot( 1.5, oq.bn_check_online ) ;
-            oq.timer_oneshot( 2, BNSetFriendNote, presenceId, _oq_note ) ;
+            oq.timer_oneshot( 3, BNSetFriendNote, presenceId, _oq_note ) ;
           end
         end
       end
@@ -16228,12 +16250,19 @@ function oq.on_premade_stats( raid_token, nMem, is_source, tm, status, nWait, ty
     return ;
   end
   local s = raid.stats ;
+  if (s == nil) then
+    raid.stats = tbl.new() ; 
+    s = raid.stats ;
+    s.nMembers     = tonumber(nMem) ;
+    s.nWaiting     = tonumber(nWait) ;
+    s.status       = tonumber(status) ;
+  end
   local wins = 0 ;
   tm = tonumber(tm) ;
   if ((raid.tm == nil) or (raid.tm <= tm)) then
     s.nMembers     = tonumber(nMem) ;
-    s.status       = tonumber(status) ;
     s.nWaiting     = tonumber(nWait) ;
+    s.status       = tonumber(status) ;
     if (is_source) then
       raid.tm = tm ; -- so only the latest data is kept
     end
@@ -16605,7 +16634,7 @@ function oq.waitlist_check( name, realm )
   local req_token, v ;
   for req_token,v in pairs(oq.waitlist) do
     if ((v.name == name) and (v._2binvited == true)) then
-      oq.InviteUnit( name, realm, req_token ) ;
+      oq.InviteUnit( name, realm, req_token, true ) ;
       return ;
     end
   end
@@ -16613,7 +16642,7 @@ function oq.waitlist_check( name, realm )
   if (oq.pending_invites) then
     for id,v in pairs(oq.pending_invites) do
       if (id == key) then
-        oq.InviteUnit( name, realm, v.req_token ) ;
+        oq.InviteUnit( name, realm, v.req_token, true ) ;
         return ;
       end
     end
@@ -16796,7 +16825,7 @@ function oq.waitlist_invite_all()
     return ;
   end
   oq.waitlist_inviteall_button:Disable() ;
-  oq.timer_oneshot( OQ_FINDMESH_CD, oq.enable_button, oq.waitlist_inviteall_button ) ;
+  oq.timer_oneshot( OQ_INVITEALL_CD, oq.enable_button, oq.waitlist_inviteall_button ) ;
 
   local nfriends = select( 1, BNGetNumFriends() ) ;
   if (nfriends < OQ.BNET_CAPB4THECAP) then
@@ -18878,7 +18907,7 @@ function oq.decode_premade_info( data )
   if (is_horde) then
     faction = "H" ;
   end
-  local  range = OQ.SHORT_LEVEL_RANGE[ oq.decode_mime64_digits( data:sub(2,2) ) ] ;
+  local  range = OQ.SHORT_LEVEL_RANGE[ oq.decode_mime64_digits( data:sub(2,2) ) ] or OQ.SHORT_LEVEL_RANGE[1] ;
   local  karma = data:sub(19,19) ;
   if (karma == nil) or (karma == "") then
     karma = 0 ;
@@ -21883,7 +21912,7 @@ function oq.player_new_level()
   
   local minlevel, maxlevel = oq.get_player_level_range() ;
   if (minlevel == 0) then
-    txt = "unavailable" ;
+    txt = "UNK" ;
   elseif (minlevel == 90) then
     txt = "90" ;
   else
