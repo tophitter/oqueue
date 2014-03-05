@@ -51,6 +51,19 @@ OQ.TYPE_LADDER    = 'L' ;
 OQ.TYPE_CHALLENGE = 'C' ;
 OQ.TYPE_MISC      = 'M' ;
 
+OQ.PREMADE_TYPES = { [ OQ.TYPE_NONE      ] = 1,
+                     [ OQ.TYPE_BG        ] = 1,
+                     [ OQ.TYPE_RBG       ] = 1,
+                     [ OQ.TYPE_RAID      ] = 1,
+                     [ OQ.TYPE_DUNGEON   ] = 1,
+                     [ OQ.TYPE_SCENARIO  ] = 1,
+                     [ OQ.TYPE_ARENA     ] = 1,
+                     [ OQ.TYPE_QUESTS    ] = 1,
+                     [ OQ.TYPE_LADDER    ] = 1,
+                     [ OQ.TYPE_CHALLENGE ] = 1,
+                     [ OQ.TYPE_MISC      ] = 1,
+                   } ;
+
 OQ.DD_NONE     = "none" ;
 OQ.DD_STAR     = "star" ;
 OQ.DD_CIRCLE   = "circle" ;

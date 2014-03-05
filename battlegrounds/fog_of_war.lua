@@ -171,11 +171,10 @@ end
 
 function oq.fog_clear()
   local f = WorldMapButton._fog ;
-  if (f ~= nil) then
-    return ;
-  end
-  for i,v in pairs(f._bogeys) do
-    v:clear() ;
+  if (f) and (f._bogeys) then
+    for i,v in pairs(f._bogeys) do
+      v:clear() ;
+    end
   end
 end
 

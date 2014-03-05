@@ -1,5 +1,21 @@
 ﻿change.log for oQueue
 
+v1.8.2  BUGFIX: made sure empty premade lines wouldn't show
+        BUGFIX: oq panels originally positioned with negative x or y fixed
+        BUGFIX: row hilight when pending was removed when scrolling or going to different sections
+        BUGFIX: rows that fell off the top or bottom being forced into hiding
+        add: special version tag to show subversions in titlebar (ie: 1.8.1b)
+
+v1.8.1  BUGFIX: premades with nil tm, leader name, or group name removed
+        UPD: optimized frame recycling 
+        UPD: find-premade list performance improvement 
+        UPD: forums swtiched from oq.publicvent.org to the forums on the main site; solidice.com/forums
+        UPD: huge memory save; find-premade list optimized to use minimal rows (13 or so) via visibility tricks
+        add: additional logic filters (ie:  "cel | ordo" or "flex & 1 | 2" or "rgb & !yolo"); left to right order
+        add: ability to list premade groups.  cmdline: /oq show premades [substring]
+        add: disband premade cmdline option:  /oq disband
+        add: find-mesh response printed to general chat (many times no response is recv'd. grrrr)
+
 v1.8.0  BUGFIX: nil raid stats check
         BUGFIX: strlower check on leader names for sorting
         BUGFIX: sanitized the premade filter to remove '%+-/^#<>=()[]{};,' (thx Adi!!)

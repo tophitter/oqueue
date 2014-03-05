@@ -67,9 +67,6 @@ function oq.make_frame_moveable( f )
 end
 
 function oq.moveto( f, x, y ) 
-f.__x = x ;
-f.__y = y ;
-
   if (y >= 0) then
     if (x >= 0) then 
       f:SetPoint("TOPLEFT",f:GetParent(),"TOPLEFT", x, -1 * y)
@@ -86,12 +83,14 @@ f.__y = y ;
 end
 
 function oq.setpos( f, x, y, cx, cy )
-  oq.moveto( f, x, y ) ;
-  if (cx ~= nil) and (cx > 0) then
-    f:SetWidth(cx) ;
-  end
-  if (cy ~= nil) and (cy > 0) then
-    f:SetHeight(cy) ;
+  if (f) then
+    oq.moveto( f, x, y ) ;
+    if (cx ~= nil) and (cx > 0) then
+      f:SetWidth(cx) ;
+    end
+    if (cy ~= nil) and (cy > 0) then
+      f:SetHeight(cy) ;
+    end
   end
   return f ;
 end
@@ -112,10 +111,16 @@ end
 
 -- dump a count of frame types ready for reuse
 --
-function oq.frame_report()
+function oq.frame_report( opt )
+  local arg = nil ;
+  if (opt) and (opt:find(' ')) then
+    arg = strlower(opt:sub(opt:find(' ')+1, -1)) ;
+  end
   print( "--[ frame dump ]--" ) ;
   for i,v in pairs(oq.__frame_pool) do
-    print( "  ".. tostring(i) .."  #".. tbl.size(v) ) ;
+    if (arg == nil) or (strlower(i):find(arg)) then
+      print( "  ".. tostring(i) .."  #".. tbl.size(v) .." / ".. tostring(oq.__frame_pool_cnt[i] or 0) ) ;
+    end
   end
   print( "--" ) ;
 end
@@ -142,12 +147,16 @@ function oq.CreateFrame( type, name, parent, template )
     tbl.clear( oq.__frame_pool[key] ) ;
   end
   local f = next(oq.__frame_pool[key]) ;
-  if (f) then
+  if (f) and (f.SetParent) then
     oq.__frame_pool[key][f] = nil ;
     f:SetParent( parent ) ;
     -- what about name and template?
   else
     f = CreateFrame( type, name, parent, template ) ;
+    if (oq.__frame_pool_cnt == nil) then
+      oq.__frame_pool_cnt = tbl.new() ;
+    end
+    oq.__frame_pool_cnt[name] = (oq.__frame_pool_cnt[name] or 0) + 1 ;
   end
   if (parent ~= nil) then
     f:SetFrameLevel( parent:GetFrameLevel() + 1 ) ;
@@ -157,8 +166,7 @@ end
 
 function oq.editline( parent, name, x, y, cx, cy, max_chars )
   oq.nthings = (oq.nthings or 0) + 1 ;
-  local n = "OQ_".. name .."".. oq.nthings ;
-  local e = oq.CreateFrame("EditBox", n, parent, "InputBoxTemplate" )
+  local e = oq.CreateFrame("EditBox", "OQEditline".. tostring(oq.nthings), parent, "InputBoxTemplate" )
   e:SetPoint("TOPLEFT", parent, "TOPLEFT", 0,0 ) ; 
   e:SetText( "" ) ;
   e:SetAutoFocus(false)
@@ -175,9 +183,7 @@ function oq.editline( parent, name, x, y, cx, cy, max_chars )
 end
 
 function oq.editbox( parent, name, x, y, cx, cy, max_chars, func, init_val )
-  oq.nthings = (oq.nthings or 0) + 1 ;
-  local n = "OQ_".. name .."".. oq.nthings ;
-  local e = oq.CreateFrame("EditBox", n, parent ) ;
+  local e = oq.CreateFrame("EditBox", "OQEditBox", parent ) ;
   e:SetMultiLine(true) ;
   e:SetPoint("TOPLEFT", parent, "TOPLEFT", x,-y ) ; 
   e:SetPoint("BOTTOMRIGHT", parent, "TOPLEFT", x+cx,-y-cy ) ; 
@@ -208,9 +214,7 @@ function oq.editbox( parent, name, x, y, cx, cy, max_chars, func, init_val )
 end
 
 function oq.checkbox( parent, x, y, cx, cy, text_cx, text, is_checked, on_click_func )
-  oq.nthings = (oq.nthings or 0) + 1 ;
-  local n = "OQ_Check".. oq.nthings ;
-  local button = oq.CreateFrame("CheckButton", n, parent, "UICheckButtonTemplate")
+  local button = oq.CreateFrame("CheckButton", "OQ_Check", parent, "UICheckButtonTemplate")
   button:SetWidth(cx)
   button:SetHeight(cy)
   button.string = button:CreateFontString()
@@ -235,9 +239,7 @@ function oq.checkbox( parent, x, y, cx, cy, text_cx, text, is_checked, on_click_
 end
 
 function oq.radiobutton( parent, x, y, cx, cy, text_cx, text, value, on_click_func )
-  oq.nthings = (oq.nthings or 0) + 1 ;
-  local n = "OQ_RadioButton".. oq.nthings ;
-  local button = oq.CreateFrame("CheckButton", n, parent, "UIRadioButtonTemplate")
+  local button = oq.CreateFrame("CheckButton", "OQ_RadioButton", parent, "UIRadioButtonTemplate")
   button:SetWidth(cx)
   button:SetHeight(cy)
   button.value = value ;
@@ -258,9 +260,7 @@ function oq.radiobutton( parent, x, y, cx, cy, text_cx, text, value, on_click_fu
 end
 
 function oq.click_label( parent, x, y, cx, cy, text, justify_v, justify_h, font, template )
-  oq.nthings = (oq.nthings or 0) + 1 ;
-  local name = "OQClikLabel".. oq.nthings ;
-  local f = oq.CreateFrame("Button", name, parent, template )
+  local f = oq.CreateFrame("Button", "OQClikLabel", parent, template )
   f:SetWidth (cx) ; -- Set these to whatever height/width is needed 
   f:SetHeight(cy) ; -- for your Texture
   f:SetBackdropColor(0.2,0.9,0.2,1.0); -- transparent
@@ -284,8 +284,8 @@ function oq.label( parent, x, y, cx, cy, text, justify_v, justify_h, font, strat
 end
 
 function oq.panel( parent, name, x, y, cx, cy, no_texture )
---  local f = oq.CreateFrame("FRAME", "$parent".. name, parent )
   local f = oq.CreateFrame("FRAME", name, parent ) ;
+  f:SetPoint("TOPLEFT",f:GetParent(),"TOPLEFT", x, -1 * y) ;
   f:SetWidth (cx) ; -- Set these to whatever height/width is needed 
   f:SetHeight(cy) ; -- for your Texture
   f:SetBackdropColor(0.2,0.2,0.2,1.0);
@@ -296,16 +296,11 @@ function oq.panel( parent, name, x, y, cx, cy, no_texture )
     t:SetDrawLayer("BACKGROUND") ;
     f.texture = t ;
   end
-
-  f:SetPoint( "TOPLEFT", x, -1 * y) ;
   return f ;
 end
 
 function oq.texture( parent, x, y, cx, cy, texture )
-  oq.nthings = (oq.nthings or 0) + 1 ;
-  local name = "OQ_Texture".. oq.nthings ;
-
-  local f = oq.CreateFrame("FRAME", name, parent )
+  local f = oq.CreateFrame("FRAME", "OQ_Texture", parent )
   f:SetWidth(cx) ;
   f:SetHeight(cy) ;
   f:SetBackdropColor(0.2,0.2,0.2,1.0) ;
@@ -322,10 +317,7 @@ function oq.texture( parent, x, y, cx, cy, texture )
 end
 
 function oq.texture_button( parent, x, y, cx, cy, up_texture, dn_texture, disable_texture )
-  oq.nthings = (oq.nthings or 0) + 1 ;
-  local name = "OQ_TexturedButton".. oq.nthings ;
-
-  local f = oq.CreateFrame("BUTTON", name, parent )
+  local f = oq.CreateFrame("BUTTON", "OQ_TexturedButton", parent )
   f:SetWidth(cx) ;
   f:SetHeight(cy) ;
   f:SetBackdropColor(0.2,0.2,0.2,1.0) ;
@@ -384,8 +376,7 @@ function oq.button_disable( f )
 end
 
 function oq.button( parent, x, y, cx, cy, text, on_click_func )
-  oq.nthings = (oq.nthings or 0) + 1 ;
-  local button = oq.CreateFrame("Button", parent:GetName() .. "Button".. oq.nthings, parent, "UIPanelButtonTemplate")
+  local button = oq.CreateFrame("Button", "OQButton", parent, "UIPanelButtonTemplate")
 
   button:SetWidth(cx)
   button:SetHeight(cy)
@@ -403,8 +394,7 @@ function oq.button( parent, x, y, cx, cy, text, on_click_func )
 end
 
 function oq.button2( parent, x, y, cx, cy, text, font_sz, on_click_func )
-  oq.nthings = (oq.nthings or 0) + 1 ;
-  local button = oq.CreateFrame("Button", parent:GetName() .. "Button".. oq.nthings, parent, "UIPanelButtonTemplate")
+  local button = oq.CreateFrame("Button", "OQButton2", parent, "UIPanelButtonTemplate")
 
   button:SetWidth(cx)
   button:SetHeight(cy)
@@ -424,8 +414,7 @@ function oq.button2( parent, x, y, cx, cy, text, font_sz, on_click_func )
 end
 
 function oq.closebox( parent, on_close )
-  oq.nthings = (oq.nthings or 0) + 1 ;
-  local closepb = oq.CreateFrame("Button", parent:GetName() .. "Close".. oq.nthings, parent, "UIPanelCloseButton") ;
+  local closepb = oq.CreateFrame("Button", "OQClose", parent, "UIPanelCloseButton") ;
   closepb:SetWidth(25) ;
   closepb:SetHeight(25) ;
   closepb:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -7, -7) ;
@@ -477,7 +466,7 @@ function oq.menu_create()
 
     local y = 8 ;
     for i=1,OQ.MAX_MENU_OPTIONS do
-      local m = oq.CreateFrame( "BUTTON", "OQMenuOption".. i, oq.__menu ) ;
+      local m = oq.CreateFrame( "BUTTON", "OQMenuOption", oq.__menu ) ;
       y = oq.__menu._cy * (i-1) ;
       if (oq.__backdrop19 == nil) then
         oq.__backdrop19 = { bgFile="Interface/Tooltips/UI-Tooltip-Background", 

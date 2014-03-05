@@ -1248,5 +1248,6 @@ OQ.SHORT_BGROUPS = {
 
 
 OQ.gbl = { ["scintilla#2342"   ] = "exploiting",  -- OQ exploiter; eu-yt
+           ["Furïïøuz#2521"    ] = "exploiting",  -- OQ exploiter; gold dragon 
          } ;
 end

@@ -736,14 +736,9 @@ function oq.pm_tooltip_set( f, raid_token )
   if (raid.leader_xp == nil) then
     raid.leader_xp = "" ;
   end
-  local s = raid.stats ;
-  if (s == nil) then
-    return ;
-  end
-  local nMembers = s.nMembers ;
-  local nWaiting = s.nWaiting ;
+  local nMembers = raid.nMembers ;
+  local nWaiting = raid.nWaiting ;
   if ((raid_token == oq.raid.raid_token) and oq.iam_raid_leader()) then
-    s = OQ_data.stats ;
     nMembers, _avgresil, _avgilevel, nWaiting = oq.calc_raid_stats() ;
   end
   local back_set = oq.premade_vip_check( pm_tooltip, raid_token, true ) ;
@@ -922,3 +917,9 @@ function oq.pm_tooltip_hide()
   end
 end
 
+function oq.create_tooltips()
+  oq.pm_tooltip_create() ;
+  oq.tooltip_create() ;
+  oq.long_tooltip_create() ;
+  oq.gen_tooltip_create() ;
+end
