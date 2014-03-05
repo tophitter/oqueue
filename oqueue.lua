@@ -137,7 +137,7 @@ local OQ_MAJOR                 = 1 ;
 local OQ_MINOR                 = 8 ;
 local OQ_REVISION              = 1 ;
 local OQ_BUILD                 = 181 ;
-local OQ_SPECIAL_TAG           = "d" ;
+local OQ_SPECIAL_TAG           = "e" ;
 local OQUEUE_VERSION           = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) ..".".. OQ_REVISION ;
 local OQUEUE_VERSION_SHORT     = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) .."".. OQ_REVISION ;
 local OQ_VERSION               = tostring(OQ_MAJOR) .."".. tostring(OQ_MINOR) .."".. tostring(OQ_REVISION) ;
@@ -3664,6 +3664,7 @@ function oq.check_bg_status()
     oq._instance_duration = 0 ;
     oq._boss_fight        = nil ;
     oq._wiped             = nil ;
+    oq._instance_faction  = nil ;
     oq.timer_oneshot( 5, oq.oqgeneral_leave ) ;
     if (oq._instance_type == "pvp") then
       oq.timer( "threat_update", 2.5, oq.threat_update , true ) ;
@@ -3682,8 +3683,9 @@ function oq.check_bg_status()
     oq.timer_oneshot( 2.0, oq.log_realm_name ) ;
   end
   if (instance ~= 1) and (oq._inside_instance ~= nil) and (not UnitIsDeadOrGhost("player")) then
-    oq._inside_instance = nil ;
-    oq._entered_alone   = nil ;
+    oq._inside_instance  = nil ;
+    oq._entered_alone    = nil ;
+    oq._instance_faction = nil ;
     if (oq._instance_tm) and (oq._instance_tm > 0) then
       oq._instance_end_tm   = oq.utc_time() ;
       oq._instance_duration = oq._instance_end_tm - oq._instance_tm ;
@@ -3823,6 +3825,9 @@ function oq.calc_player_stats()
 end
 
 function oq.get_bg_faction()
+  if (oq._instance_faction) then
+    return oq._instance_faction ;
+  end
   local numScores    = GetNumBattlefieldScores() ;
   local nMembers     = 0 ;
   local hks          = 0 ;
@@ -3836,6 +3841,7 @@ function oq.get_bg_faction()
       faction = "A" ;
     end
     if (name == player_name) then
+      oq._instance_faction = faction ;
       return faction ;
     end
   end  
@@ -6826,16 +6832,20 @@ function oq.compare_banlist( a, b )
   if (OQ_data.banlist_sort_ascending == nil) then
     v1 = oq.tab6_banlist[b] ;
     v2 = oq.tab6_banlist[a] ;
+  end 
+
+  if (OQ_data.banlist_sort == nil) then
+    OQ_data.banlist_sort = "ts" ;
   end
 
   if (OQ_data.banlist_sort == "ts") then
     return (v1._ts < v2._ts) ;
   end
   if (OQ_data.banlist_sort == "reason") then
-  return (strlower(v1.reason:GetText()) < strlower(v2.reason:GetText())) ;
+  return (strlower(v1.reason:GetText() or "") < strlower(v2.reason:GetText() or "")) ;
   end
   -- default sort: btag
-  return (strlower(v1.btag:GetText()) < strlower(v2.btag:GetText())) ;
+  return (strlower(v1.btag:GetText() or "") < strlower(v2.btag:GetText() or "")) ;
 end
 
 function oq.sort_banlist( col )

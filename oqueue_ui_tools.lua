@@ -134,12 +134,12 @@ function oq.DeleteFrame( f )
   oq.__frame_pool[strlower(f:GetName())][f] = true ;
 end
 
-function oq.CreateFrame( type, name, parent, template )
+function oq.CreateFrame( type_, name, parent, template )
   if (oq.__frame_pool == nil) then
     oq.__frame_pool = tbl.new() ;
   end
-  type = strlower(type) ;
-  name = strlower(name) ;
+  type_ = strlower(type_) ;
+  name  = strlower(name) ;
   local key = name ;
   
   if (oq.__frame_pool[key] == nil) then
@@ -152,7 +152,7 @@ function oq.CreateFrame( type, name, parent, template )
     f:SetParent( parent ) ;
     -- what about name and template?
   else
-    f = CreateFrame( type, name, parent, template ) ;
+    f = CreateFrame( type_, name, parent, template ) ;
     if (oq.__frame_pool_cnt == nil) then
       oq.__frame_pool_cnt = tbl.new() ;
     end
