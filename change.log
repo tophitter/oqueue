@@ -1,10 +1,15 @@
 ﻿change.log for oQueue
 
-v1.8.2  BUGFIX: made sure empty premade lines wouldn't show
+v1.8.2a BUGFIX: made sure empty premade lines wouldn't show
         BUGFIX: oq panels originally positioned with negative x or y fixed
         BUGFIX: row hilight when pending was removed when scrolling or going to different sections
         BUGFIX: rows that fell off the top or bottom being forced into hiding
+        BUGFIX: nil filter check
+        BUGFIX: row offset not always initialized
         add: special version tag to show subversions in titlebar (ie: 1.8.1b)
+        add: disband group and eject all members. leader only. cmdline: /oq ejectall
+        add: find group member's name, realm and btag from partial string.  cmdline:  /oq find <substring>
+        add: pushing score data to oqgeneral to notify the people with 1.7.5 or sooner
 
 v1.8.1  BUGFIX: premades with nil tm, leader name, or group name removed
         UPD: optimized frame recycling 

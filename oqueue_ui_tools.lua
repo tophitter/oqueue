@@ -119,7 +119,7 @@ function oq.frame_report( opt )
   print( "--[ frame dump ]--" ) ;
   for i,v in pairs(oq.__frame_pool) do
     if (arg == nil) or (strlower(i):find(arg)) then
-      print( "  ".. tostring(i) .."  #".. tbl.size(v) .." / ".. tostring(oq.__frame_pool_cnt[i] or 0) ) ;
+      print( " ".. tostring(tbl.size(v)-1) .." / ".. tostring(v[0] or 0) .." ".. tostring(i) ) ;
     end
   end
   print( "--" ) ;
@@ -130,8 +130,9 @@ function oq.DeleteFrame( f )
     return ;
   end
   f:Hide() ;
+--  oq.__frame_pool[strlower(f:GetName())][f] = true ;
+  table.insert( oq.__frame_pool[strlower(f:GetName())], f ) ;  
   f:SetParent(nil) ;
-  oq.__frame_pool[strlower(f:GetName())][f] = true ;
 end
 
 function oq.CreateFrame( type_, name, parent, template )
@@ -145,18 +146,20 @@ function oq.CreateFrame( type_, name, parent, template )
   if (oq.__frame_pool[key] == nil) then
     oq.__frame_pool[key] = tbl.new() ;
     tbl.clear( oq.__frame_pool[key] ) ;
+    oq.__frame_pool[key][0] = 0 ;
   end
-  local f = next(oq.__frame_pool[key]) ;
-  if (f) and (f.SetParent) then
-    oq.__frame_pool[key][f] = nil ;
+  
+  local pool = oq.__frame_pool[key] ;
+  local ndx = tbl.next(pool) ;
+  local f = nil ;
+  if (ndx) and (pool[ndx]) then
+    f = pool[ndx] ;
+    pool[ndx] = nil ;
     f:SetParent( parent ) ;
     -- what about name and template?
   else
     f = CreateFrame( type_, name, parent, template ) ;
-    if (oq.__frame_pool_cnt == nil) then
-      oq.__frame_pool_cnt = tbl.new() ;
-    end
-    oq.__frame_pool_cnt[name] = (oq.__frame_pool_cnt[name] or 0) + 1 ;
+    pool[0] = (pool[0] or 0) + 1 ;
   end
   if (parent ~= nil) then
     f:SetFrameLevel( parent:GetFrameLevel() + 1 ) ;

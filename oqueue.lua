@@ -19,29 +19,6 @@ local tbl = OQ.table ;
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
-function tbl.new()
-  if (tbl.__pool == nil) then
-    tbl.__pool = {} ;
-  end
-  local t = next(tbl.__pool) ;
-  if t then
-    tbl.__pool[t] = nil ;
-  else
-    t = {} 
-    tbl._count = (tbl._count or 0) + 1 ;
-  end
-  return t ;
-end
-
-function tbl.delete(t)
-  if (t) then
-    tbl.clear(t) ;
-    tbl.__pool[t] = true ;
-    tbl._count = (tbl._count or 0) - 1 ;
-  end
-  return nil ;
-end
-
 function tbl.clear(t, deep)
   if (t) then
     if (deep) then
@@ -58,15 +35,23 @@ function tbl.clear(t, deep)
   return t ;
 end
 
-function tbl.size(t)
-  if (t == nil) then
-    return nil ;
+function tbl.delete(t)
+  if (t) then
+    tbl.clear(t) ;
+    tbl.__pool[t] = true ;
+    tbl._count = (tbl._count or 0) - 1 ;
   end
-  local n = 0 ;
+  return nil ;
+end
+
+function tbl.dump(t)
+  print( "--" ) ;
+  local s = "  " ;
   for i,v in pairs(t) do
-    n = n + 1 ;
+    s = s .."[".. tostring(i) ..":  ".. tostring(v) .."]" ;
   end
-  return n ;
+  print( s ) ;
+  print( "--" ) ;
 end
 
 function tbl.fill( t, ... )
@@ -99,14 +84,40 @@ function tbl.fill_match( t, str, ch )
   return n ;
 end
 
-function tbl.dump(t)
-  print( "--" ) ;
-  local s = "  " ;
-  for i,v in pairs(t) do
-    s = s .."[".. tostring(i) ..":  ".. tostring(v) .."]" ;
+function tbl.new()
+  if (tbl.__pool == nil) then
+    tbl.__pool = {} ;
   end
-  print( s ) ;
-  print( "--" ) ;
+  local t = next(tbl.__pool) ;
+  if t then
+    tbl.__pool[t] = nil ;
+  else
+    t = {} 
+    tbl._count = (tbl._count or 0) + 1 ;
+  end
+  return t ;
+end
+
+function tbl.next(t)
+  if (t ~= nil) then
+    for i,v in pairs(t) do
+      if (i ~= 0) then
+        return i ;
+      end
+    end
+  end
+  return nil ;
+end
+
+function tbl.size(t)
+  if (t == nil) then
+    return nil ;
+  end
+  local n = 0 ;
+  for i,v in pairs(t) do
+    n = n + 1 ;
+  end
+  return n ;
 end
 
 -- returns deep copy of table object
@@ -135,9 +146,9 @@ end
 
 local OQ_MAJOR                 = 1 ;
 local OQ_MINOR                 = 8 ;
-local OQ_REVISION              = 1 ;
-local OQ_BUILD                 = 181 ;
-local OQ_SPECIAL_TAG           = "e" ;
+local OQ_REVISION              = 2 ;
+local OQ_BUILD                 = 182 ;
+local OQ_SPECIAL_TAG           = "a" ;
 local OQUEUE_VERSION           = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) ..".".. OQ_REVISION ;
 local OQUEUE_VERSION_SHORT     = tostring(OQ_MAJOR) ..".".. tostring(OQ_MINOR) .."".. OQ_REVISION ;
 local OQ_VERSION               = tostring(OQ_MAJOR) .."".. tostring(OQ_MINOR) .."".. tostring(OQ_REVISION) ;
@@ -161,6 +172,7 @@ local OQ_FLD_TO                = "#to:" ;
 local OQ_FLD_FROM              = "#fr:" ;
 local OQ_FLD_REALM             = "#rlm:" ;
 local OQ_REALM_CHANNEL         = "oqchannel" ;
+local OQ_OQGENERAL             = "oqgeneral" ;
 local OQ_TTL                   = 4 ;
 local OQ_PREMADE_STAT_LIFETIME = 5*60 ; -- 5 minutes
 local OQ_GROUP_TIMEOUT         = 2*60 ; -- 2 minutes (matches raid-timeout) if no response will remove group 
@@ -394,24 +406,25 @@ OQ.FACTION_ICON = tbl.new() ;
 OQ.FACTION_ICON["H"] = "|TInterface\\BattlefieldFrame\\Battleground-Horde.blp:20:20:0:0|t";
 OQ.FACTION_ICON["A"] = "|TInterface\\BattlefieldFrame\\Battleground-Alliance.blp:20:20:0:0|t";
 
-local OQ_LOCK          = "|TInterface\\BUTTONS\\UI-Button-KeyRing.blp:28:20:0:0:20:24:0:16:0:16|t";
-local OQ_KEY           = "Interface\\BUTTONS\\UI-Button-KeyRing" ;
+OQ.LOCK          = "|TInterface\\BUTTONS\\UI-Button-KeyRing.blp:28:20:0:0:20:24:0:16:0:16|t";
+OQ.KEY           = "Interface\\BUTTONS\\UI-Button-KeyRing" ;
 
+local OQ_BIGDIAMOND_ICON  = "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:16:16:0:0:64:64:32:48:0:16|t";
 local OQ_STAR_ICON     = "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:16:16:0:0:64:64:0:16:0:16|t";
 local OQ_CIRCLE_ICON   = "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:16:16:0:0:64:64:16:32:0:16|t";
 local OQ_DIAMOND_ICON  = "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:10:10:0:0:64:64:32:48:0:16|t";
-local OQ_BIGDIAMOND_ICON  = "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:16:16:0:0:64:64:32:48:0:16|t";
 local OQ_TRIANGLE_ICON = "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:16:16:0:0:64:64:48:64:0:16|t";
-local OQ_LILTRIANGLE_ICON = "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:8:8:0:0:64:64:48:64:0:16|t";
-local OQ_LILDIAMOND_ICON  = "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:8:8:0:0:64:64:32:48:0:16|t";
-
 local OQ_MOON_ICON     = "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:16:16:0:0:64:64:0:16:16:32|t";
 local OQ_SQUARE_ICON   = "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:16:16:0:0:64:64:16:32:16:32|t";
 local OQ_REDX_ICON     = "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:16:16:0:0:64:64:32:48:16:32|t";
-local OQ_LILREDX_ICON  = "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:8:8:0:0:64:64:32:48:16:32|t";
 local OQ_SKULL_ICON    = "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:16:16:0:0:64:64:48:64:16:32|t";
-local OQ_LILSKULL_ICON = "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:10:10:0:0:64:64:48:64:16:32|t";
-local OQ_LILCIRCLE_ICON= "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:8:8:0:0:64:64:16:32:0:16|t";
+
+OQ.LILTRIANGLE_ICON = "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:8:8:0:0:64:64:48:64:0:16|t";
+OQ.LILDIAMOND_ICON  = "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:8:8:0:0:64:64:32:48:0:16|t";
+OQ.LILSTAR_ICON  = "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:8:8:0:0:64:64:0:16:0:16|t";
+OQ.LILREDX_ICON  = "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:8:8:0:0:64:64:32:48:16:32|t";
+OQ.LILSKULL_ICON = "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:10:10:0:0:64:64:48:64:16:32|t";
+OQ.LILCIRCLE_ICON= "|TInterface\\TARGETINGFRAME\\UI-RaidTargetingIcons.blp:8:8:0:0:64:64:16:32:0:16|t";
 
 OQ.ICON_NONE        = 0 ;
 OQ.ICON_STAR        = 1 ;
@@ -554,6 +567,8 @@ function oq.hook_options()
   oq.options[ "disband"     ] = oq.raid_disband ; 
   oq.options[ "dg"          ] = oq.leave_party ;  -- drop group
   oq.options[ "dp"          ] = oq.leave_party ;  -- drop party
+  oq.options[ "ejectall"    ] = oq.ejectall ;  
+  oq.options[ "find"        ] = oq.cmdline_find_member ;  
   oq.options[ "fixui"       ] = oq.reposition_ui ;  
   oq.options[ "fog"         ] = oq.fog_command ;  
   oq.options[ "godark"      ] = oq.godark ;
@@ -1850,7 +1865,7 @@ end
 function oq.dip( opt )
   local n_bnfriends = select( 1, BNGetNumFriends() )  ;
   if (n_bnfriends >= OQ_MAX_BNFRIENDS) then
-    print( OQ_LILSKULL_ICON .." ".. string.format( OQ.NODIPFORYOU, OQ_MAX_BNFRIENDS ) ) ;
+    print( OQ.LILSKULL_ICON .." ".. string.format( OQ.NODIPFORYOU, OQ_MAX_BNFRIENDS ) ) ;
     return ;
   end
   local now = oq.utc_time() ;
@@ -2419,20 +2434,20 @@ function oq.dump_statistics()
   print( "  my_tears         : ".. tostring(oq.total_tears()) ) ;
 
   if (OQ.REGION ~= "us") and (OQ.REGION ~= "eu") then
-    print( "  my_region        : ".. OQ_LILREDX_ICON .." |cFFFF8080invalid region(".. tostring(OQ.REGION) ..")|r" ) ;
+    print( "  my_region        : ".. OQ.LILREDX_ICON .." |cFFFF8080invalid region(".. tostring(OQ.REGION) ..")|r" ) ;
   else
     print( "  my_region        : ".. tostring(OQ.REGION) ) ;
   end
   print( "  my_realmlist     : ".. tostring(GetCVar("realmlist")) ) ;
   
   if (player_realm == nil) then
-    print( "  my_realm          : ".. OQ_LILREDX_ICON .." |cFFFF8080unknown realm: ".. tostring(GetRealmName()) .."|r" ) ;
+    print( "  my_realm          : ".. OQ.LILREDX_ICON .." |cFFFF8080unknown realm: ".. tostring(GetRealmName()) .."|r" ) ;
   else
     print( "  my_realm         : ".. tostring(player_realm)  .." (".. tostring(oq.realm_cooked(player_realm)) ..")" ) ;
   end
   
   if (player_realid == nil) then
-    print( "  my_btag          : ".. OQ_LILREDX_ICON .." |cFFFF8080no battle-tag assigned|r" ) ;
+    print( "  my_btag          : ".. OQ.LILREDX_ICON .." |cFFFF8080no battle-tag assigned|r" ) ;
   else
     print( "  my_btag          : ".. tostring( player_realid ) ) ;
   end
@@ -2702,6 +2717,7 @@ function oq.join_oq_general()
     return ;
   end
   oq.channel_join( OQ_REALM_CHANNEL ) ;
+  oq.channel_join( OQ_OQGENERAL ) ;
 end
 
 function oq.oqgeneral_join()
@@ -2709,6 +2725,7 @@ function oq.oqgeneral_join()
     return ;
   end
   oq.channel_join( OQ_REALM_CHANNEL ) ;
+  oq.channel_join( OQ_OQGENERAL ) ;
   oq.timer( "hook_roster_update"   ,  5, oq.hook_roster_update      , true, OQ_REALM_CHANNEL ) ; -- will repeat until channel joined
   oq.timer( "chk_OQGeneralLockdown", 30, oq.check_oqgeneral_lockdown, true ) ; -- will check capacity every 30 seconds
 end
@@ -2716,6 +2733,7 @@ end
 function oq.oqgeneral_leave()
   _oqgeneral_lockdown = true ; -- lock the door.  the restriction will life once joined and cleared
   oq.channel_leave( OQ_REALM_CHANNEL ) ;
+  oq.channel_leave( OQ_OQGENERAL ) ;
   oq.timer( "chk_OQGeneralLockdown", 0, nil ) ;
 end
 
@@ -3013,7 +3031,7 @@ function oq.check_currency()
     duration = oq.utc_time() - oq._instance_tm ;
   end
   if (duration == nil) or (duration == 0) then
-    print( OQ_LILREDX_ICON .." ".. OQ.ERR_NODURATION ) ;
+    print( OQ.LILREDX_ICON .." ".. OQ.ERR_NODURATION ) ;
     return ;
   end
   
@@ -3028,9 +3046,9 @@ function oq.check_currency()
          local rate = floor( (delta / duration) * 60 * 60 ) ; -- bg_length is seconds * 60*60 --> delta/hr
          if (delta > 0) then
            if (name == OQ.HONOR_PTS) and (count == OQ_MAX_HONOR) then -- honor capped
-             oq.log( true, name .."  ".. OQ_LILREDX_ICON .." ".. OQ.CAPPED .." ".. OQ_LILREDX_ICON ) ;
+             oq.log( true, name .."  ".. OQ.LILREDX_ICON .." ".. OQ.CAPPED .." ".. OQ.LILREDX_ICON ) ;
            elseif (name == OQ.HONOR_PTS) and (count >= OQ_MAX_HONOR_WARNING) then -- approaching honor capped
-             oq.log( true, OQ.GAINED .." ".. delta .." ".. name .."  (".. rate .." ".. OQ.PERHOUR ..")  ".. OQ_LILREDX_ICON .." ".. OQ.APPROACHING_CAP .." ".. OQ_LILREDX_ICON ) ;
+             oq.log( true, OQ.GAINED .." ".. delta .." ".. name .."  (".. rate .." ".. OQ.PERHOUR ..")  ".. OQ.LILREDX_ICON .." ".. OQ.APPROACHING_CAP .." ".. OQ.LILREDX_ICON ) ;
            else
              oq.log( true, OQ.GAINED .." ".. delta .." ".. name .."  (".. rate .." ".. OQ.PERHOUR ..")" ) ;
            end
@@ -3038,7 +3056,7 @@ function oq.check_currency()
            oq.log( true, OQ.LOST .." ".. delta .." ".. name .."  (".. rate .." ".. OQ.PERHOUR ..")" ) ;
          end
        elseif (OQ_toon.player_wallet[ name ] == count) and (name == OQ.HONOR_PTS) and (count == OQ_MAX_HONOR) then
-         oq.log( true, name .."  ".. OQ_LILREDX_ICON .." ".. OQ.CAPPED .." ".. OQ_LILREDX_ICON ) ;
+         oq.log( true, name .."  ".. OQ.LILREDX_ICON .." ".. OQ.CAPPED .." ".. OQ.LILREDX_ICON ) ;
        end
      end
   end
@@ -3394,7 +3412,7 @@ function oq.deserted()
   if (oq.raid.type == OQ.TYPE_RBG) then
     s = OQ_toon.stats["rbg"] ;
   end
-  print( OQ_LILSKULL_ICON .."  ".. OQ.RANAWAY ) ;
+  print( OQ.LILSKULL_ICON .."  ".. OQ.RANAWAY ) ;
   
   s.nLosses = s.nLosses + 1 ;
   s.nGames  = s.nGames + 1 ;
@@ -3476,12 +3494,12 @@ end
 function oq.warning_no_role()
   local class, spec, spec_id = oq.get_spec() ;
   
-  print( OQ_LILREDX_ICON .."  WARNING:  player_role unknown.  This may be a language support issue." ) ;
-  print( OQ_LILREDX_ICON .."  WARNING:  If you believe oQueue does not support your language," ) ;
-  print( OQ_LILREDX_ICON .."  WARNING:  please inform tiny on wow.publicvent.org : 4135 " ) ;
-  print( OQ_LILREDX_ICON .."  locale: ".. GetLocale() ) ;
-  print( OQ_LILREDX_ICON .."  class: ".. tostring(class) ) ;
-  print( OQ_LILREDX_ICON .."  spec: ".. tostring(spec) ) ;
+  print( OQ.LILREDX_ICON .."  WARNING:  player_role unknown.  This may be a language support issue." ) ;
+  print( OQ.LILREDX_ICON .."  WARNING:  If you believe oQueue does not support your language," ) ;
+  print( OQ.LILREDX_ICON .."  WARNING:  please inform tiny on wow.publicvent.org : 4135 " ) ;
+  print( OQ.LILREDX_ICON .."  locale: ".. GetLocale() ) ;
+  print( OQ.LILREDX_ICON .."  class: ".. tostring(class) ) ;
+  print( OQ.LILREDX_ICON .."  spec: ".. tostring(spec) ) ;
 end
 
 function oq.get_spec()
@@ -3730,7 +3748,7 @@ end
 
 function oq.announce_new_contract( contract )
   print( "|Hcontract:".. tostring(contract.id) .. "|h"..
-         OQ_LILSKULL_ICON ..
+         OQ.LILSKULL_ICON ..
          string.format( OQ.CONTRACT_ARRIVED, contract.id, contract.name, oq.get_crowns( contract.reward, 12 ) ) 
          ) ;
 end
@@ -4104,7 +4122,7 @@ end
 
 function oq.karma_vote_btag( btag, pts ) 
   if (btag == nil) or (btag == "") then
-    print( OQ_LILREDX_ICON .."  ".. OQ.BAD_KARMA_BTAG ) ;
+    print( OQ.LILREDX_ICON .."  ".. OQ.BAD_KARMA_BTAG ) ;
     return ;
   end
   local now = oq.utc_time() ;
@@ -4112,7 +4130,7 @@ function oq.karma_vote_btag( btag, pts )
     OQ_data.karma = tbl.new() ;
   end
   if (oq.max_karma( btag, now )) then
-    print( OQ_LILREDX_ICON .."  ".. string.format( OQ.MAX_KARMA_TODAY, btag ) ) ;
+    print( OQ.LILREDX_ICON .."  ".. string.format( OQ.MAX_KARMA_TODAY, btag ) ) ;
     return ;
   end
   oq.send_karma( btag, pts ) ;
@@ -4156,12 +4174,12 @@ function oq.on_karma( token, btag, karma, vlist, sk_time )
     -- my karma
     local dk = karma - player_karma ;
     if (dk > 0) then
-      print( OQ_LILTRIANGLE_ICON .."  ".. string.format( OQ.YOUVE_GOT_KARMA , abs(dk) ) ) ;
+      print( OQ.LILTRIANGLE_ICON .."  ".. string.format( OQ.YOUVE_GOT_KARMA , abs(dk) ) ) ;
     elseif (dk < 0) then
       if (abs(dk) == 1) then
-        print( OQ_LILREDX_ICON .."  ".. string.format( OQ.YOUVE_LOST_KARMA , abs(dk) ) ) ;
+        print( OQ.LILREDX_ICON .."  ".. string.format( OQ.YOUVE_LOST_KARMA , abs(dk) ) ) ;
       else
-        print( OQ_LILREDX_ICON .."  ".. string.format( OQ.YOUVE_LOST_KARMAS, abs(dk) ) ) ;
+        print( OQ.LILREDX_ICON .."  ".. string.format( OQ.YOUVE_LOST_KARMAS, abs(dk) ) ) ;
       end
     end
     player_karma   = karma ;
@@ -5731,8 +5749,8 @@ function oq.update_bn_friend_info( friendId )
     oq._banlist_detection[_f[3]] = now ;
     -- announce it no more then once every 5 seconds
     if (dt > 5) then
-      oq.log( true, " ".. OQ_LILSKULL_ICON .." ".. L["Found oQ banned b.tag on your friends list"] ) ;
-      oq.log( true, " ".. OQ_LILSKULL_ICON .." ".. L["removing: "] .. tostring(_f[3]) ) ;
+      oq.log( true, " ".. OQ.LILSKULL_ICON .." ".. L["Found oQ banned b.tag on your friends list"] ) ;
+      oq.log( true, " ".. OQ.LILSKULL_ICON .." ".. L["removing: "] .. tostring(_f[3]) ) ;
     end
     BNRemoveFriend( presenceID ) ; 
   else
@@ -5784,9 +5802,9 @@ function oq.check_cap_before_the_cap()
       return ;
     else
       if (oq._warning_001 == nil) or ((now - oq._warning_001) > 120) then
-        print( OQ_LILSKULL_ICON .." ".. string.format( L["WARNING:  Your battle.net friends list has %s friends."], tostring(ntotal) )) ;
-        print( OQ_LILSKULL_ICON .." ".. string.format( L["WARNING:  You've exceeded the cap before the cap(%s)"], OQ.BNET_CAPB4THECAP )) ;
-        print( OQ_LILSKULL_ICON .." ".. string.format( L["WARNING:  No mesh nodes available for removal.  Please trim your b.net friends list"] )) ;
+        print( OQ.LILSKULL_ICON .." ".. string.format( L["WARNING:  Your battle.net friends list has %s friends."], tostring(ntotal) )) ;
+        print( OQ.LILSKULL_ICON .." ".. string.format( L["WARNING:  You've exceeded the cap before the cap(%s)"], OQ.BNET_CAPB4THECAP )) ;
+        print( OQ.LILSKULL_ICON .." ".. string.format( L["WARNING:  No mesh nodes available for removal.  Please trim your b.net friends list"] )) ;
       end
       oq._warning_001 = now ;
     end
@@ -6478,6 +6496,38 @@ function oq.raid_disband()
   end
 end
 
+function oq.ejectall()
+  if (oq.iam_raid_leader()) then
+    oq.raid_disband() ;
+    for i=1,GetNumGroupMembers() do
+      oq.UninviteUnit(select( 1, GetRaidRosterInfo(i) )) ;
+    end
+  end
+end
+
+function oq.cmdline_find_member( subname )
+  if (subname == nil) then
+    print( L["please specify partial string"] ) ;
+    return 0 ;
+  end
+  local table = oq.raid.group ;
+  local cnt = 0 ;
+  subname = strlower(subname) ;
+  for i=1,8 do
+    for j=1,5 do
+      local m = table[i].member[j] ;
+      if (subname == "#all") and (m.name) then
+        cnt = cnt + 1 ;
+        print( "  ".. tostring(i) ..".".. tostring(j) .."  |cFF00e0e0".. tostring(m.name) .."-".. tostring(m.realm) .."|r  ".. tostring(m.realid or "UNK") ) ;
+      elseif (m.name) and (strlower(m.name):find(subname)) then
+        cnt = cnt + 1 ;
+        print( "  ".. tostring(i) ..".".. tostring(j) .."  |cFF00e0e0".. tostring(m.name) .."-".. tostring(m.realm) .."|r  ".. tostring(m.realid or "UNK") ) ;
+      end
+    end
+  end  
+  print( "----  ".. tostring(cnt) .." found" ) ;
+end
+
 function oq.raid_find()
   local now = oq.utc_time() ;
   if ((_last_find_tm + 8) > now) then
@@ -6593,8 +6643,10 @@ function oq.remove_premade( token )
       oq.old_raids[token].btag = oq.premades[token].leader_rid ;
     end
     reshuffle = (oq.premades[token]._row ~= nil) ;
-    oq.DeleteFrame( oq.premades[token]._row ) ;
-    oq.premades[ token ] = tbl.delete( oq.premades[ token ] ) ;
+    oq.premades[ token ]._row   = oq.DeleteFrame( oq.premades[token]._row ) ;
+    oq.premades[ token ].type   = nil ;
+    oq.premades[ token ]._isvis = nil ;
+    oq.premades[ token ] = tbl.delete( oq.premades[token] ) ;
   end
   if (reshuffle) then
     oq.reshuffle_premades() ;
@@ -6725,6 +6777,7 @@ function oq.reshuffle_premades()
   
   oq._npremades = 0 ;
   table.sort(_vips, oq.compare_premades) ;
+  y = 0 ;
   for i,v in pairs(_vips) do
     oq.setpos( oq.premades[v]._row, x, y, cx, cy ) ;
     oq.premades[v].__y = y ;
@@ -8492,7 +8545,7 @@ function oq.on_classdot_menu_select( g_id, slot, action )
     local m = oq.raid.group[ tonumber(g_id) ].member[ tonumber(slot) ] ;
     local pid, is_online = oq.is_bnfriend(m.realid) ;
     if (pid ~= nil) then
-      print( OQ_LILTRIANGLE_ICON .." ".. string.format( OQ.ALREADY_FRIENDED, m.realid )) ;
+      print( OQ.LILTRIANGLE_ICON .." ".. string.format( OQ.ALREADY_FRIENDED, m.realid )) ;
     else
       BNSendFriendInvite( m.realid, string.format( OQ.FRIEND_REQUEST, player_name, player_realm )) ;
     end
@@ -10107,7 +10160,7 @@ function oq.on_btags( token, t1, t2, t3, t4, t5, t6 )
     -- not my token, bogus msg
     return ;
   end
-  oq.log( true, OQ_LILDIAMOND_ICON .." ".. L["find-mesh response recv'd"] ) ;
+  oq.log( true, OQ.LILDIAMOND_ICON .." ".. L["find-mesh response recv'd"] ) ;
 
   local sktm = oq.decode_mime64_digits(_vars[4]) ; 
   local now = oq.utc_time("pure") ;
@@ -10833,7 +10886,7 @@ function oq.a3(v)
 end
 
 function oq.new_bounty_type2( b )
-  print( OQ_LILCIRCLE_ICON .." ".. OQ.DEATHMATCH_BEGINS ) ;
+  print( OQ.LILCIRCLE_ICON .." ".. OQ.DEATHMATCH_BEGINS ) ;
   if (oq.marquee:IsVisible()) and (not oq.marquee.match_up:IsVisible()) then
     oq.marquee.match_up:Show() ;
     -- play sound to announce the match
@@ -10860,7 +10913,7 @@ function oq.update_bounty_type2( b, winner )
     end
   end
   if (winner) then
-    print( OQ_LILCIRCLE_ICON .."  ".. OQ.FACTION_ICON[winner:sub(1,1)] .." ".. winner .." ".. OQ.WONTHEMATCH ) ;
+    print( OQ.LILCIRCLE_ICON .."  ".. OQ.FACTION_ICON[winner:sub(1,1)] .." ".. winner .." ".. OQ.WONTHEMATCH ) ;
   end
 end
 
@@ -10891,9 +10944,9 @@ function oq.bounty_update( bid, type, start, dur, h_reward, a_reward, flags, h_x
         end
         if (OQ_data.show_contract_ads == 1) and (type == 1) then
           if (winner) and (pname) then
-            print( OQ_LILSKULL_ICON .." ".. string.format( OQ.CONTRACT_CLAIMED01, pname, OQ.FACTION_ICON[winner:sub(1,1)], bid, oq.get_crowns( reward, 12 ) )) ;
+            print( OQ.LILSKULL_ICON .." ".. string.format( OQ.CONTRACT_CLAIMED01, pname, OQ.FACTION_ICON[winner:sub(1,1)], bid, oq.get_crowns( reward, 12 ) )) ;
           elseif (winner) then
-            print( OQ_LILSKULL_ICON .." ".. string.format( OQ.CONTRACT_CLAIMED02, winner, bid, oq.get_crowns( reward, 12 ) )) ;
+            print( OQ.LILSKULL_ICON .." ".. string.format( OQ.CONTRACT_CLAIMED02, winner, bid, oq.get_crowns( reward, 12 ) )) ;
           end
         end
       end
@@ -11414,9 +11467,9 @@ function oq.pass_filter( premade )
   local f = nil ;
   while (str) do
     p2, c1 = oq.strcspn( str, "&|" ) ;
-    f = oq.trim( str:sub( p1, p2-1 ) ) ;
+    f = oq.trim( str:sub( p1, (p2 or 0) -1 ) ) ;
     r = oq.pass_filter_condition( f, premade ) ;
-    if (p2 > 0) then
+    if (p2) and (p2 > 0) then
       str = str:sub(p2+2,-1) ;
       p1 = 1 ;
     else
@@ -14614,6 +14667,11 @@ function oq.on_disband( raid_tok, token, local_override )
     _ok2relay = nil ; 
     return ;
   end
+  if (oq._disbanded == nil) then
+    oq._disbanded = tbl.new() ;
+  end
+  oq._disbanded[raid_tok] = oq.utc_time() ;
+  
   oq.token_push( token ) ;
   oq.remove_premade( raid_tok ) ;
   -- clear from cache
@@ -15289,7 +15347,7 @@ function oq.update_my_premade_line()
       line.req_but:Disable() ;
       if (raid.has_pword) then
         line.has_pword.texture:Show() ;
-        line.has_pword.texture:SetTexture( OQ_KEY ) ;
+        line.has_pword.texture:SetTexture( OQ.KEY ) ;
       else
         line.has_pword.texture:Hide() ;
         line.has_pword.texture:SetTexture( nil ) ;
@@ -16005,7 +16063,7 @@ function oq.update_raid_listitem( raid_tok, raid_name, ilevel, resil, mmr, battl
     f.req_but:Enable() ;
     f.has_pword.texture:Show() ;
     if (has_pword) then
-      f.has_pword.texture:SetTexture( OQ_KEY ) ;
+      f.has_pword.texture:SetTexture( OQ.KEY ) ;
     else
       f.has_pword.texture:SetTexture( nil ) ;
     end
@@ -16043,7 +16101,7 @@ function oq.show_locals()
       if (p) then
         print( "  ".. tostring(sender) ..": [".. tostring(raid_tok) .."] ".. tostring(p.name) ) ;
       else
-        print( "  ".. tostring(sender) ..": [".. tostring(raid_tok) .."]  ".. OQ_LILREDX_ICON ) ;
+        print( "  ".. tostring(sender) ..": [".. tostring(raid_tok) .."]  ".. OQ.LILREDX_ICON ) ;
       end
     end
   end
@@ -16078,7 +16136,7 @@ function oq.bad_source(raid_tok)
       cnt = cnt + 1 ;
     end  
     if (cnt > OQ.MAX_ORIGINALS) then
-      print( OQ_LILSKULL_ICON .."  ".. L["group spammer spotted."] .."  ".. tostring(sender) .." ".. L["added to the ban list"] ) ;
+      print( OQ.LILSKULL_ICON .."  ".. L["group spammer spotted."] .."  ".. tostring(sender) .." ".. L["added to the ban list"] ) ;
       oq.ban_add( sender, L["auto-add: group spammer"] ) ;
       for i,v in pairs(OQ_data._locals[sender]) do
         oq.remove_premade(i) ;
@@ -16086,6 +16144,17 @@ function oq.bad_source(raid_tok)
       return true ;
     end
   end
+end
+
+function oq.recently_disbanded( raid_tok, now )
+  if (oq._disbanded == nil) then
+    oq._disbanded = tbl.new() ;
+  end
+  if (oq._disbanded[raid_tok]) and ((now - oq._disbanded[raid_tok]) < 15) then
+    -- 15 seconds in disband window
+    return true ;
+  end
+  return nil ;
 end
 
 local npremades = 0 ;
@@ -16113,12 +16182,16 @@ function oq.on_premade( raid_tok, raid_name, premade_info, enc_data, bgs_, type_
     _ok2relay = nil ;
     return ;
   end
+  local now = oq.utc_time() ;
+  if (oq.recently_disbanded( raid_tok, now )) then
+    _ok2relay = nil ;
+    return ;
+  end
   oq._raid_token = raid_tok ;
   _premadeinfo = premade_info ;
   local faction, has_pword, is_realm_specific, is_source, level_range, 
         min_ilevel, min_resil, nmembers, nwaiting, status, tm_, min_mmr, karma  = oq.decode_premade_info( premade_info ) ;
         
-  local now = oq.utc_time() ;
   if (oq._p8s == nil) then oq._p8s = tbl.new() ; end 
   if (now < (oq._p8s[raid_tok] or 0)) then 
     _ok2relay = nil ;
@@ -17852,7 +17925,7 @@ function oq.on_scores( enc_data, sk_time, curr_oq_version, xdata, officers, xrea
   OQ_data._xrealm_arena = tonumber(xrealm_arena or 0) or 0 ;
   local now = oq.utc_time() ;
   if (sig ~= "skaa004") then
-    oq.debug_report( OQ_LILSKULL_ICON .." bad sig(".. tostring(sig) ..") (".. tostring(_source) ..".".. tostring(oq._sender) ..") TTL(".. tostring(_hop) ..") ".. tostring(abs(now - sk_time)) ) ;
+    oq.debug_report( OQ.LILSKULL_ICON .." bad sig(".. tostring(sig) ..") (".. tostring(_source) ..".".. tostring(oq._sender) ..") TTL(".. tostring(_hop) ..") ".. tostring(abs(now - sk_time)) ) ;
     _ok2relay = nil ;  -- do not relay 
     return ;
   end
@@ -17861,7 +17934,7 @@ function oq.on_scores( enc_data, sk_time, curr_oq_version, xdata, officers, xrea
   oq.check_drift(dt) ;
   if (dt > 180) then
     _ok2relay = nil ;  -- do not relay 
-    oq.debug_report( OQ_LILSKULL_ICON .." now: ".. tostring(now) .."  tm_diff: ".. tostring(abs(sk_time-now)) .." sender:".. tostring(oq._sender) .." hop: ".. tostring(_hop) .." score: ".. _msg:sub(1,30) ) ;
+    oq.debug_report( OQ.LILSKULL_ICON .." now: ".. tostring(now) .."  tm_diff: ".. tostring(abs(sk_time-now)) .." sender:".. tostring(oq._sender) .." hop: ".. tostring(_hop) .." score: ".. _msg:sub(1,30) ) ;
     return ;
   end
 
@@ -17889,6 +17962,8 @@ function oq.on_scores( enc_data, sk_time, curr_oq_version, xdata, officers, xrea
   oq.scores.end_round_tm = tonumber(_score_args[15], 16 ) ;
   oq.scores.bg[ "DWG"  ] = tonumber(_score_args[16], 16 ) ;
   oq.scores.bg[ "DKP"  ] = tonumber(_score_args[17], 16 ) ;
+
+  oq.debug_report( OQ.LILSTAR_ICON .." |cFF808080score|r  H |cFFFF8080".. tostring(oq.scores.horde) .."|r  A |cFF8080FF".. tostring(oq.scores.alliance) .."|r" ) ;
   
   if (xdata) and (xdata:find("#to") == nil) then
     oq.scores.a_ngames, oq.scores.a_nleaders, oq.scores.a_nactive,
@@ -17926,6 +18001,7 @@ function oq.on_scores( enc_data, sk_time, curr_oq_version, xdata, officers, xrea
   
   -- check current version against sk version
   oq.verify_version( OQ_VER, curr_oq_version ) ;
+  oq.channel_say( "OQGeneral", _msg ) ;
 end
 
 function oq.verify_version( proto_version, oq_version ) 
@@ -17981,7 +18057,6 @@ function oq.verify_version( proto_version, oq_version )
   -- new version detected, sending msg on
   _ok2relay = 1 ;
   oq.forward_msg( _source, oq._sender, _vars[3]:sub(1,1), _vars[5], _msg ) ;
-  oq.channel_say( "OQGeneral", _msg ) ;
 end
 
 function oq.new_version_fanfare()
@@ -20551,25 +20626,26 @@ function oq.process_msg( sender, msg )
 end
 
 function oq.post_process()
-  oq._sender       = nil ;
-  oq._sender_name  = nil ;
-  oq._sender_realm = nil ;
-  oq._sender_toonid= nil ;
-  _sender_pid      = nil ;
-  _local_msg       = nil ;
-  _source          = nil ;
-  _ok2relay        = 1 ; 
-  _dest_realm      = nil ;
-  _msg_type        = nil ;
-  _msg_id          = nil ;
-  _core_msg        = nil ;
-  _to_name         = nil ;
-  _to_realm        = nil ;  
-  _inc_channel     = nil ;
-  _msg             = nil ;
-  _core_msg        = nil ;
-  oq._raid_token   = nil ;
-  _reason          = "" ;
+  oq._sender          = nil ;
+  oq._sender_name     = nil ;
+  oq._sender_realm    = nil ;
+  oq._sender_toonid   = nil ;
+  _sender_pid         = nil ;
+  _local_msg          = nil ;
+  _source             = nil ;
+  _ok2relay           = 1 ; 
+  _dest_realm         = nil ;
+  _msg_type           = nil ;
+  _msg_id             = nil ;
+  _core_msg           = nil ;
+  _to_name            = nil ;
+  _to_realm           = nil ;  
+  _inc_channel        = nil ;
+  _msg                = nil ;
+  _core_msg           = nil ;
+  oq._raid_token      = nil ;
+  _reason             = "" ;
+  oq._relay2oqgeneral = nil ;
   tbl.clear(_opts) ;
   tbl.clear(_vars) ;
   tbl.clear(_arg) ;
@@ -20780,7 +20856,7 @@ function oq.on_player_target_change()
       local id = tonumber(guid:sub(6,10),16) ; 
       local is_bty_target = oq.is_bounty_target(id) ;
       if (is_bty_target) then
---        print( OQ_LILSKULL_ICON .." ".. string.format( OQ.TARGET_MARK, is_bty_target ) ) ;
+--        print( OQ.LILSKULL_ICON .." ".. string.format( OQ.TARGET_MARK, is_bty_target ) ) ;
         PlaySoundFile("Sound/Doodad/DwarfHorn.ogg")
         if (player_faction == "H") then
           PlaySoundFile("Sound/Doodad/BellTollHorde.ogg")
@@ -21571,9 +21647,9 @@ function oq.on_combat_damage_inflicted(...)
   if (is_bty_target) then
     oq.timer_oneshot( 1.0, PlaySoundFile, "Sound/Doodad/WoW_MoP_Intro_SFX_Bell_wGong.OGG" ) ;
     if (contract.type == 1) then
-      oq.log( true, OQ_LILSKULL_ICON .." ".. string.format( OQ.BOUNTY_TARGET, is_bty_target ) ) ;
+      oq.log( true, OQ.LILSKULL_ICON .." ".. string.format( OQ.BOUNTY_TARGET, is_bty_target ) ) ;
     elseif (contract.type > 1) and (contract.type < 10) then
-      oq.log( true, OQ_LILSKULL_ICON .." ".. OQ.DEATHMATCH_SCORE ) ;
+      oq.log( true, OQ.LILSKULL_ICON .." ".. OQ.DEATHMATCH_SCORE ) ;
     end
     oq.check_bounty_board( id ) ;
   end
@@ -21600,9 +21676,9 @@ function oq.on_party_kill( ... )
       oq.check_bounty_board( id ) ;
       oq.timer_oneshot( 1.0, PlaySoundFile, "Sound/Doodad/WoW_MoP_Intro_SFX_Bell_wGong.OGG" ) ;
       if (contract.type == 1) then
-        oq.log( true, OQ_LILSKULL_ICON .." ".. string.format( OQ.BOUNTY_TARGET, is_bty_target ) ) ;
+        oq.log( true, OQ.LILSKULL_ICON .." ".. string.format( OQ.BOUNTY_TARGET, is_bty_target ) ) ;
       elseif (contract.type > 1) and (contract.type < 10) then
-        oq.log( true, OQ_LILSKULL_ICON .." ".. OQ.DEATHMATCH_SCORE ) ;
+        oq.log( true, OQ.LILSKULL_ICON .." ".. OQ.DEATHMATCH_SCORE ) ;
       end
     end
   end
@@ -21613,7 +21689,7 @@ function oq.on_party_kill( ... )
     if (OQ_toon.shout_kbs == 1) and (_enemy ~= nil) and (target ~= nil) then
       if (caster == player_name) and (_enemy[target] ~= nil) then
         _nkbs = _nkbs + 1 ;
-        print( OQ_LILSKULL_ICON .." killing blow: ".. target .."  (".. _nkbs .." so far)" ) ;
+        print( OQ.LILSKULL_ICON .." killing blow: ".. target .."  (".. _nkbs .." so far)" ) ;
       end
     end
   end
@@ -21682,9 +21758,9 @@ function oq.report_boss_kill( id, guid )
     oq._instance_pts   = (oq._instance_pts or 0) + pts ;
     oq._last_boss_kill = id ;
     if (pts > 0) then
-      print( OQ_LILSKULL_ICON ) ;
-      print( OQ_LILSKULL_ICON .." boss killed (pts: ".. pts .."  total: ".. tostring(oq._instance_pts or 0) ..")" ) ;
-      print( OQ_LILSKULL_ICON ) ;
+      print( OQ.LILSKULL_ICON ) ;
+      print( OQ.LILSKULL_ICON .." boss killed (pts: ".. pts .."  total: ".. tostring(oq._instance_pts or 0) ..")" ) ;
+      print( OQ.LILSKULL_ICON ) ;
     end
     
     if (pts == 0) or (not oq.iam_raid_leader()) or (oq.iam_alone()) then
@@ -21759,7 +21835,7 @@ function oq.on_spell_cast_success( ... )
     -- _flags holding same faction player list by player name
     -- 
     if ((_arg[2] == "SPELL_CAST_SUCCESS") and (oq.WhoPoppedList_Ids[ spellId ] ~= nil) and (_flags ~= nil) and (_flags[caster] ~= nil)) then
-      _last_lust = OQ_LILSKULL_ICON .." ".. (caster or "(unknown)") .." popped ".. oq.WhoPoppedList_Ids[ spellId ] ;
+      _last_lust = OQ.LILSKULL_ICON .." ".. (caster or "(unknown)") .." popped ".. oq.WhoPoppedList_Ids[ spellId ] ;
       print( _last_lust ) ;
     end
   end
@@ -22076,7 +22152,7 @@ function oq.btag_hyperlink_action( btag, action )
   elseif (action == "friend") then
     local pid, is_online = oq.is_bnfriend(btag) ;
     if (pid ~= nil) then
-      print( OQ_LILTRIANGLE_ICON .." ".. string.format( OQ.ALREADY_FRIENDED, btag )) ;
+      print( OQ.LILTRIANGLE_ICON .." ".. string.format( OQ.ALREADY_FRIENDED, btag )) ;
     else
       BNSendFriendInvite( btag, string.format( OQ.FRIEND_REQUEST, player_name, player_realm )) ;
     end
